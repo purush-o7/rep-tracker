@@ -1,0 +1,28 @@
+export const MUSCLE_GROUPS = [
+  "biceps",
+  "triceps",
+  "back",
+  "legs",
+  "chest",
+  "shoulders",
+  "core",
+  "cardio",
+  "glutes",
+  "forearms",
+  "full_body",
+] as const;
+
+export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
+
+export const NAV_ITEMS = [
+  { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
+  { label: "Workouts", href: "/workouts", icon: "Dumbbell" },
+  { label: "My Logs", href: "/my-logs", icon: "ClipboardList" },
+  { label: "Reports", href: "/reports", icon: "BarChart3" },
+  { label: "Settings", href: "/settings", icon: "Settings" },
+] as const;
+
+export const ADMIN_NAV_ITEMS = [
+  { label: "Users", href: "/admin", icon: "Users" },
+  { label: "Workout Catalog", href: "/admin/workouts", icon: "Dumbbell" },
+] as const;
