@@ -23,6 +23,9 @@ export type Database = {
           is_public: boolean;
           partner_can_view_logs: boolean;
           partner_can_edit_logs: boolean;
+          current_streak: number;
+          longest_streak: number;
+          last_workout_date: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -39,6 +42,9 @@ export type Database = {
           is_public?: boolean;
           partner_can_view_logs?: boolean;
           partner_can_edit_logs?: boolean;
+          current_streak?: number;
+          longest_streak?: number;
+          last_workout_date?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -55,6 +61,9 @@ export type Database = {
           is_public?: boolean;
           partner_can_view_logs?: boolean;
           partner_can_edit_logs?: boolean;
+          current_streak?: number;
+          longest_streak?: number;
+          last_workout_date?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -209,6 +218,90 @@ export type Database = {
           status?: "pending" | "accepted" | "rejected";
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      workout_groups: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          description: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      workout_group_items: {
+        Row: {
+          id: string;
+          group_id: string;
+          workout_id: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          group_id: string;
+          workout_id: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          group_id?: string;
+          workout_id?: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+      };
+      daily_plan_items: {
+        Row: {
+          id: string;
+          user_id: string;
+          workout_id: string;
+          plan_date: string;
+          sort_order: number;
+          source_group_id: string | null;
+          is_completed: boolean;
+          workout_log_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          workout_id: string;
+          plan_date?: string;
+          sort_order?: number;
+          source_group_id?: string | null;
+          is_completed?: boolean;
+          workout_log_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          workout_id?: string;
+          plan_date?: string;
+          sort_order?: number;
+          source_group_id?: string | null;
+          is_completed?: boolean;
+          workout_log_id?: string | null;
+          created_at?: string;
         };
       };
     };

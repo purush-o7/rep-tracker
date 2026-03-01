@@ -8,8 +8,9 @@ import {
   ClipboardList,
   BarChart3,
   Users,
-  Compass,
   Settings,
+  CalendarDays,
+  CalendarCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,17 +30,19 @@ const icons = {
   ClipboardList,
   BarChart3,
   Users,
-  Compass,
   Settings,
+  CalendarDays,
+  CalendarCheck,
 } as const;
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" as const },
+  { label: "Today", href: "/today", icon: "CalendarCheck" as const },
   { label: "Workouts", href: "/workouts", icon: "Dumbbell" as const },
+  { label: "My Routines", href: "/routines", icon: "CalendarDays" as const },
   { label: "My Logs", href: "/my-logs", icon: "ClipboardList" as const },
   { label: "Reports", href: "/reports", icon: "BarChart3" as const },
   { label: "Partners", href: "/partners", icon: "Users" as const },
-  { label: "Discover", href: "/discover", icon: "Compass" as const },
   { label: "Settings", href: "/settings", icon: "Settings" as const },
 ];
 
@@ -50,8 +53,13 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-4">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <Dumbbell className="h-6 w-6 text-primary" />
-          <span className="text-lg font-bold group-data-[collapsible=icon]:hidden">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+            <Dumbbell className="h-5 w-5 text-primary" />
+          </div>
+          <span
+            className="text-lg font-bold group-data-[collapsible=icon]:hidden"
+            style={{ fontFamily: "var(--font-display), sans-serif" }}
+          >
             GymTracker
           </span>
         </Link>
@@ -65,10 +73,13 @@ export function AppSidebar() {
                 const Icon = icons[item.icon];
                 const isActive = pathname.startsWith(item.href);
                 return (
-                  <SidebarMenuItem key={item.href}>
+                  <SidebarMenuItem key={item.href} className="relative">
+                    {isActive && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-primary" />
+                    )}
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
                       <Link href={item.href}>
-                        <Icon className="h-4 w-4" />
+                        <Icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>

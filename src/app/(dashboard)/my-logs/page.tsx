@@ -1,9 +1,19 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import {
+  getPartnersWithPermissions,
+  resolvePartnerView,
+} from "@/lib/data/partners";
 import { LogList } from "./_components/log-list";
 import { PartnerSwitcher } from "../_components/partner-switcher";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ShieldAlert, Users } from "lucide-react";
+import {
+  parsePaginationParams,
+  toRange,
+  getTotalPages,
+  clampPage,
+} from "@/lib/pagination";
 
 export const metadata: Metadata = {
   title: "My Logs - GymTracker",
@@ -12,7 +22,13 @@ export const metadata: Metadata = {
 export default async function MyLogsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ partner?: string }>;
+  searchParams: Promise<{
+    partner?: string;
+    page?: string;
+    pageSize?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }>;
 }) {
   const params = await searchParams;
   const supabase = await createClient();
@@ -21,40 +37,14 @@ export default async function MyLogsPage({
   } = await supabase.auth.getUser();
 
   const currentUserId = user!.id;
-  let viewingUserId = currentUserId;
-  let partnerName: string | null = null;
 
-  // Fetch accepted partners
-  const { data: partnerRows } = await supabase
-    .from("workout_partners")
-    .select("requester_id, addressee_id")
-    .eq("status", "accepted")
-    .or(
-      `requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`
-    );
-
-  const partnerIds = (partnerRows ?? []).map((p) =>
-    p.requester_id === currentUserId ? p.addressee_id : p.requester_id
+  // Fetch partners
+  const { partners, partnerIds } = await getPartnersWithPermissions(
+    supabase,
+    currentUserId
   );
-
-  let partners: { id: string; full_name: string | null; partner_can_view_logs: boolean }[] = [];
-  if (partnerIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, full_name, partner_can_view_logs")
-      .in("id", partnerIds);
-    partners = profiles ?? [];
-  }
-
-  let partnerViewRestricted = false;
-  if (params.partner && partnerIds.includes(params.partner)) {
-    viewingUserId = params.partner;
-    const partnerProfile = partners.find((p) => p.id === params.partner);
-    partnerName = partnerProfile?.full_name ?? "Partner";
-    if (partnerProfile && !partnerProfile.partner_can_view_logs) {
-      partnerViewRestricted = true;
-    }
-  }
+  const { viewingUserId, partnerName, partnerViewRestricted } =
+    resolvePartnerView(params, partners, partnerIds, currentUserId);
 
   if (partnerViewRestricted) {
     return (
@@ -71,18 +61,41 @@ export default async function MyLogsPage({
         <Alert variant="destructive">
           <ShieldAlert className="h-4 w-4" />
           <AlertDescription>
-            <strong>{partnerName}</strong> has restricted access to their workout data.
+            <strong>{partnerName}</strong> has restricted access to their
+            workout data.
           </AlertDescription>
         </Alert>
       </div>
     );
   }
 
-  const { data: logs } = await supabase
+  const pagination = parsePaginationParams(params);
+  const { from, to } = toRange(pagination);
+
+  // Build query with server-side date filtering + pagination
+  let query = supabase
     .from("workout_logs")
-    .select("*, workouts(*), workout_sets(*)")
+    .select(
+      "*, workouts(name), workout_sets(id, set_number, reps, weight_kg)",
+      { count: "exact" }
+    )
     .eq("user_id", viewingUserId)
     .order("performed_at", { ascending: false });
+
+  if (params.dateFrom) {
+    query = query.gte("performed_at", params.dateFrom);
+  }
+  if (params.dateTo) {
+    query = query.lte("performed_at", `${params.dateTo}T23:59:59.999Z`);
+  }
+
+  query = query.range(from, to);
+
+  const { data: logs, count } = await query;
+
+  const totalCount = count ?? 0;
+  const totalPages = getTotalPages(totalCount, pagination.pageSize);
+  const currentPage = clampPage(pagination.page, totalPages);
 
   const isViewingPartner = viewingUserId !== currentUserId;
 
@@ -107,7 +120,16 @@ export default async function MyLogsPage({
           </AlertDescription>
         </Alert>
       )}
-      <LogList logs={logs ?? []} readOnly={isViewingPartner} />
+      <LogList
+        logs={logs ?? []}
+        readOnly={isViewingPartner}
+        currentPage={currentPage}
+        pageSize={pagination.pageSize}
+        totalCount={totalCount}
+        totalPages={totalPages}
+        dateFrom={params.dateFrom}
+        dateTo={params.dateTo}
+      />
     </div>
   );
 }

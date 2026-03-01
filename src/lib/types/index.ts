@@ -20,3 +20,13 @@ export type WorkoutLogWithDetails = WorkoutLog & {
   workouts: Workout;
   workout_sets: WorkoutSet[];
 };
+
+export type WorkoutGroup = Database["public"]["Tables"]["workout_groups"]["Row"];
+export type WorkoutGroupItem = Database["public"]["Tables"]["workout_group_items"]["Row"];
+
+export type WorkoutGroupWithItems = WorkoutGroup & {
+  workout_group_items: (WorkoutGroupItem & { workouts: Workout })[];
+};
+
+export type DailyPlanItem = Database["public"]["Tables"]["daily_plan_items"]["Row"];
+export type DailyPlanItemWithWorkout = DailyPlanItem & { workouts: Workout };

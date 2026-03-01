@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -23,12 +24,10 @@ import type { Tag } from "@/lib/types";
 interface ReportFiltersProps {
   tags: Tag[];
   workouts: { id: string; name: string }[];
-  dateFrom: Date | undefined;
-  dateTo: Date | undefined;
+  dateFrom: string;
+  dateTo: string;
   selectedTag: string | null;
   selectedWorkout: string | null;
-  onDateFromChange: (date: Date | undefined) => void;
-  onDateToChange: (date: Date | undefined) => void;
   onTagChange: (tagId: string | null) => void;
   onWorkoutChange: (workoutId: string | null) => void;
 }
@@ -40,11 +39,43 @@ export function ReportFilters({
   dateTo,
   selectedTag,
   selectedWorkout,
-  onDateFromChange,
-  onDateToChange,
   onTagChange,
   onWorkoutChange,
 }: ReportFiltersProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const dateFromValue = dateFrom
+    ? new Date(dateFrom + "T00:00:00")
+    : undefined;
+  const dateToValue = dateTo ? new Date(dateTo + "T00:00:00") : undefined;
+
+  const updateDateParam = (key: string, value: string | undefined) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+    const qs = params.toString();
+    router.push(`${pathname}${qs ? `?${qs}` : ""}`);
+  };
+
+  const handleDateFromChange = (date: Date | undefined) => {
+    updateDateParam(
+      "dateFrom",
+      date ? format(date, "yyyy-MM-dd") : undefined
+    );
+  };
+
+  const handleDateToChange = (date: Date | undefined) => {
+    updateDateParam(
+      "dateTo",
+      date ? format(date, "yyyy-MM-dd") : undefined
+    );
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
@@ -54,18 +85,18 @@ export function ReportFilters({
               variant="outline"
               className={cn(
                 "w-[160px] justify-start text-left font-normal",
-                !dateFrom && "text-muted-foreground"
+                !dateFromValue && "text-muted-foreground"
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {dateFrom ? format(dateFrom, "PP") : "From"}
+              {dateFromValue ? format(dateFromValue, "PP") : "From"}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0">
             <Calendar
               mode="single"
-              selected={dateFrom}
-              onSelect={onDateFromChange}
+              selected={dateFromValue}
+              onSelect={handleDateFromChange}
             />
           </PopoverContent>
         </Popover>
@@ -75,18 +106,18 @@ export function ReportFilters({
               variant="outline"
               className={cn(
                 "w-[160px] justify-start text-left font-normal",
-                !dateTo && "text-muted-foreground"
+                !dateToValue && "text-muted-foreground"
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {dateTo ? format(dateTo, "PP") : "To"}
+              {dateToValue ? format(dateToValue, "PP") : "To"}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0">
             <Calendar
               mode="single"
-              selected={dateTo}
-              onSelect={onDateToChange}
+              selected={dateToValue}
+              onSelect={handleDateToChange}
             />
           </PopoverContent>
         </Popover>

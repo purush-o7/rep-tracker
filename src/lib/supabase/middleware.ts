@@ -44,7 +44,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Protected routes - redirect unauthenticated users to login
-  const protectedRoutes = ["/dashboard", "/workouts", "/my-logs", "/reports", "/partners", "/settings", "/admin"];
+  const protectedRoutes = ["/dashboard", "/today", "/workouts", "/routines", "/my-logs", "/reports", "/partners", "/settings", "/admin"];
   if (
     !user &&
     protectedRoutes.some((route) => pathname.startsWith(route))

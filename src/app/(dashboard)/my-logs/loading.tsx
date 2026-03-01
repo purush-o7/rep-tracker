@@ -9,7 +9,11 @@ export default function MyLogsLoading() {
         <Skeleton className="h-10 w-[160px]" />
       </div>
       {Array.from({ length: 5 }).map((_, i) => (
-        <Skeleton key={i} className="h-16 w-full rounded-lg" />
+        <Skeleton
+          key={i}
+          className="h-16 w-full rounded-lg animate-in fade-in fill-mode-both"
+          style={{ animationDelay: `${i * 75}ms` }}
+        />
       ))}
     </div>
   );

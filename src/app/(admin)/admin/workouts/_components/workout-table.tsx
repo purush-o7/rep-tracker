@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { deleteWorkout } from "../actions";
 import { WorkoutForm } from "./workout-form";
 import { ImageUpload } from "./image-upload";
+import { SearchInput } from "@/components/search-input";
+import { DataPagination } from "@/components/data-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,9 +30,20 @@ import type { Tag, WorkoutWithTags } from "@/lib/types";
 interface WorkoutTableProps {
   workouts: WorkoutWithTags[];
   tags: Tag[];
+  currentPage: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
 }
 
-export function WorkoutTable({ workouts, tags }: WorkoutTableProps) {
+export function WorkoutTable({
+  workouts,
+  tags,
+  currentPage,
+  pageSize,
+  totalCount,
+  totalPages,
+}: WorkoutTableProps) {
   const [editWorkout, setEditWorkout] = useState<WorkoutWithTags | null>(null);
   const [imageWorkout, setImageWorkout] = useState<WorkoutWithTags | null>(null);
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -46,6 +59,8 @@ export function WorkoutTable({ workouts, tags }: WorkoutTableProps) {
 
   return (
     <>
+      <SearchInput placeholder="Search workouts..." />
+
       {/* Desktop table */}
       <div className="hidden md:block">
         <Table>
@@ -177,6 +192,13 @@ export function WorkoutTable({ workouts, tags }: WorkoutTableProps) {
           </Card>
         ))}
       </div>
+
+      <DataPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        pageSize={pageSize}
+      />
 
       {editWorkout && (
         <WorkoutForm

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -12,18 +13,53 @@ import {
 import { cn } from "@/lib/utils";
 
 interface LogFiltersProps {
-  dateFrom: Date | undefined;
-  dateTo: Date | undefined;
-  onDateFromChange: (date: Date | undefined) => void;
-  onDateToChange: (date: Date | undefined) => void;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
-export function LogFilters({
-  dateFrom,
-  dateTo,
-  onDateFromChange,
-  onDateToChange,
-}: LogFiltersProps) {
+export function LogFilters({ dateFrom, dateTo }: LogFiltersProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const dateFromValue = dateFrom ? new Date(dateFrom + "T00:00:00") : undefined;
+  const dateToValue = dateTo ? new Date(dateTo + "T00:00:00") : undefined;
+
+  const updateParams = (key: string, value: string | undefined) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+    params.delete("page"); // reset to page 1 on filter change
+    const qs = params.toString();
+    router.push(`${pathname}${qs ? `?${qs}` : ""}`);
+  };
+
+  const handleDateFromChange = (date: Date | undefined) => {
+    updateParams(
+      "dateFrom",
+      date ? format(date, "yyyy-MM-dd") : undefined
+    );
+  };
+
+  const handleDateToChange = (date: Date | undefined) => {
+    updateParams(
+      "dateTo",
+      date ? format(date, "yyyy-MM-dd") : undefined
+    );
+  };
+
+  const handleClear = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("dateFrom");
+    params.delete("dateTo");
+    params.delete("page");
+    const qs = params.toString();
+    router.push(`${pathname}${qs ? `?${qs}` : ""}`);
+  };
+
   return (
     <div className="flex flex-wrap gap-2">
       <Popover>
@@ -32,18 +68,18 @@ export function LogFilters({
             variant="outline"
             className={cn(
               "w-[160px] justify-start text-left font-normal",
-              !dateFrom && "text-muted-foreground"
+              !dateFromValue && "text-muted-foreground"
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {dateFrom ? format(dateFrom, "PP") : "From"}
+            {dateFromValue ? format(dateFromValue, "PP") : "From"}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0">
           <Calendar
             mode="single"
-            selected={dateFrom}
-            onSelect={onDateFromChange}
+            selected={dateFromValue}
+            onSelect={handleDateFromChange}
           />
         </PopoverContent>
       </Popover>
@@ -53,29 +89,23 @@ export function LogFilters({
             variant="outline"
             className={cn(
               "w-[160px] justify-start text-left font-normal",
-              !dateTo && "text-muted-foreground"
+              !dateToValue && "text-muted-foreground"
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {dateTo ? format(dateTo, "PP") : "To"}
+            {dateToValue ? format(dateToValue, "PP") : "To"}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0">
           <Calendar
             mode="single"
-            selected={dateTo}
-            onSelect={onDateToChange}
+            selected={dateToValue}
+            onSelect={handleDateToChange}
           />
         </PopoverContent>
       </Popover>
       {(dateFrom || dateTo) && (
-        <Button
-          variant="ghost"
-          onClick={() => {
-            onDateFromChange(undefined);
-            onDateToChange(undefined);
-          }}
-        >
+        <Button variant="ghost" onClick={handleClear}>
           Clear
         </Button>
       )}

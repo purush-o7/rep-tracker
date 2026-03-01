@@ -11,6 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SearchInput } from "@/components/search-input";
+import { DataPagination } from "@/components/data-pagination";
 import { UserActivityBadge } from "./user-activity-badge";
 import type { Profile } from "@/lib/types";
 
@@ -22,11 +24,23 @@ interface UserWithActivity extends Profile {
 
 interface UsersTableProps {
   users: UserWithActivity[];
+  currentPage: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
 }
 
-export function UsersTable({ users }: UsersTableProps) {
+export function UsersTable({
+  users,
+  currentPage,
+  pageSize,
+  totalCount,
+  totalPages,
+}: UsersTableProps) {
   return (
     <>
+      <SearchInput placeholder="Search by name or handle..." />
+
       {/* Desktop table */}
       <div className="hidden md:block">
         <Table>
@@ -131,6 +145,13 @@ export function UsersTable({ users }: UsersTableProps) {
           );
         })}
       </div>
+
+      <DataPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        pageSize={pageSize}
+      />
     </>
   );
 }

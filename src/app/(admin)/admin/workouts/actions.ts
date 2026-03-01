@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/supabase/auth";
+import { workoutSchema } from "@/lib/validators/workout";
 
 export async function createWorkout(formData: {
   name: string;
@@ -10,21 +12,26 @@ export async function createWorkout(formData: {
   tag_ids: string[];
 }) {
   const supabase = await createClient();
+  const auth = await requireAdmin(supabase);
+  if (auth.error) return { error: auth.error };
+
+  const parsed = workoutSchema.safeParse(formData);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const { data: workout, error } = await supabase
     .from("workouts")
     .insert({
-      name: formData.name,
-      description: formData.description || null,
-      youtube_url: formData.youtube_url || null,
+      name: parsed.data.name,
+      description: parsed.data.description || null,
+      youtube_url: parsed.data.youtube_url || null,
     })
     .select()
     .single();
 
   if (error) return { error: error.message };
 
-  if (formData.tag_ids.length > 0) {
-    const tagInserts = formData.tag_ids.map((tag_id) => ({
+  if (parsed.data.tag_ids.length > 0) {
+    const tagInserts = parsed.data.tag_ids.map((tag_id) => ({
       workout_id: workout.id,
       tag_id,
     }));
@@ -41,13 +48,18 @@ export async function updateWorkout(
   formData: { name: string; description?: string; youtube_url?: string; tag_ids: string[] }
 ) {
   const supabase = await createClient();
+  const auth = await requireAdmin(supabase);
+  if (auth.error) return { error: auth.error };
+
+  const parsed = workoutSchema.safeParse(formData);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const { error } = await supabase
     .from("workouts")
     .update({
-      name: formData.name,
-      description: formData.description || null,
-      youtube_url: formData.youtube_url || null,
+      name: parsed.data.name,
+      description: parsed.data.description || null,
+      youtube_url: parsed.data.youtube_url || null,
     })
     .eq("id", id);
 
@@ -55,8 +67,8 @@ export async function updateWorkout(
 
   // Replace tags
   await supabase.from("workout_tags").delete().eq("workout_id", id);
-  if (formData.tag_ids.length > 0) {
-    const tagInserts = formData.tag_ids.map((tag_id) => ({
+  if (parsed.data.tag_ids.length > 0) {
+    const tagInserts = parsed.data.tag_ids.map((tag_id) => ({
       workout_id: id,
       tag_id,
     }));
@@ -70,6 +82,9 @@ export async function updateWorkout(
 
 export async function deleteWorkout(id: string) {
   const supabase = await createClient();
+  const auth = await requireAdmin(supabase);
+  if (auth.error) return { error: auth.error };
+
   const { error } = await supabase.from("workouts").delete().eq("id", id);
   if (error) return { error: error.message };
 
@@ -80,6 +95,9 @@ export async function deleteWorkout(id: string) {
 
 export async function uploadWorkoutImage(workoutId: string, formData: FormData) {
   const supabase = await createClient();
+  const auth = await requireAdmin(supabase);
+  if (auth.error) return { error: auth.error };
+
   const file = formData.get("file") as File;
 
   if (!file) return { error: "No file provided" };
@@ -111,6 +129,8 @@ export async function uploadWorkoutImage(workoutId: string, formData: FormData) 
 
 export async function deleteWorkoutImage(imageId: string, storagePath: string) {
   const supabase = await createClient();
+  const auth = await requireAdmin(supabase);
+  if (auth.error) return { error: auth.error };
 
   await supabase.storage.from("workout-images").remove([storagePath]);
   await supabase.from("workout_images").delete().eq("id", imageId);

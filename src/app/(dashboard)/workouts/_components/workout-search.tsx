@@ -1,36 +1,24 @@
 "use client";
 
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { SearchInput } from "@/components/search-input";
 import type { Tag } from "@/lib/types";
 
 interface WorkoutSearchProps {
-  search: string;
-  onSearchChange: (value: string) => void;
   tags: Tag[];
   selectedTag: string | null;
   onTagChange: (tagId: string | null) => void;
+  initialSearch: string;
 }
 
 export function WorkoutSearch({
-  search,
-  onSearchChange,
   tags,
   selectedTag,
   onTagChange,
 }: WorkoutSearchProps) {
   return (
     <div className="space-y-3">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search workouts..."
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-9"
-        />
-      </div>
+      <SearchInput placeholder="Search workouts..." />
       <div className="flex flex-wrap gap-1">
         <Badge
           variant={selectedTag === null ? "default" : "outline"}

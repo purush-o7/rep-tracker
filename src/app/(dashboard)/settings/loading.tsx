@@ -5,7 +5,10 @@ export default function SettingsLoading() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <Skeleton className="h-8 w-32" />
-      <Card>
+      <Card
+        className="animate-in fade-in fill-mode-both"
+        style={{ animationDelay: "0ms" }}
+      >
         <CardHeader>
           <Skeleton className="h-5 w-32" />
         </CardHeader>
@@ -16,7 +19,10 @@ export default function SettingsLoading() {
           </div>
         </CardContent>
       </Card>
-      <Card>
+      <Card
+        className="animate-in fade-in fill-mode-both"
+        style={{ animationDelay: "75ms" }}
+      >
         <CardHeader>
           <Skeleton className="h-5 w-40" />
         </CardHeader>

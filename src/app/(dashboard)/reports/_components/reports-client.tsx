@@ -23,23 +23,23 @@ interface ReportsClientProps {
   logs: LogData[];
   tags: Tag[];
   workouts: { id: string; name: string }[];
+  dateFrom: string;
+  dateTo: string;
 }
 
-export function ReportsClient({ logs, tags, workouts }: ReportsClientProps) {
-  const [dateFrom, setDateFrom] = useState<Date | undefined>();
-  const [dateTo, setDateTo] = useState<Date | undefined>();
+export function ReportsClient({
+  logs,
+  tags,
+  workouts,
+  dateFrom,
+  dateTo,
+}: ReportsClientProps) {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [selectedWorkout, setSelectedWorkout] = useState<string | null>(null);
 
+  // Date filtering is now server-side; only tag/workout filtering remains client-side
   const filtered = useMemo(() => {
     return logs.filter((log) => {
-      const date = new Date(log.performed_at);
-      if (dateFrom && date < dateFrom) return false;
-      if (dateTo) {
-        const endOfDay = new Date(dateTo);
-        endOfDay.setHours(23, 59, 59, 999);
-        if (date > endOfDay) return false;
-      }
       if (selectedTag) {
         const hasTag = log.workouts.workout_tags.some(
           (wt) => wt.tag_id === selectedTag
@@ -49,7 +49,7 @@ export function ReportsClient({ logs, tags, workouts }: ReportsClientProps) {
       if (selectedWorkout && log.workouts.id !== selectedWorkout) return false;
       return true;
     });
-  }, [logs, dateFrom, dateTo, selectedTag, selectedWorkout]);
+  }, [logs, selectedTag, selectedWorkout]);
 
   // Weight progression for selected exercise
   const progressData = useMemo(() => {
@@ -120,8 +120,6 @@ export function ReportsClient({ logs, tags, workouts }: ReportsClientProps) {
         dateTo={dateTo}
         selectedTag={selectedTag}
         selectedWorkout={selectedWorkout}
-        onDateFromChange={setDateFrom}
-        onDateToChange={setDateTo}
         onTagChange={setSelectedTag}
         onWorkoutChange={setSelectedWorkout}
       />

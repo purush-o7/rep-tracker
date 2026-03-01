@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -34,7 +34,7 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({ profile }: ProfileFormProps) {
-  const [loading, setLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [handleStatus, setHandleStatus] = useState<
     "idle" | "checking" | "available" | "taken"
   >("idle");
@@ -83,15 +83,15 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     return () => clearTimeout(timer);
   }, [watchedHandle, checkHandle, profile.handle]);
 
-  const onSubmit = async (data: ProfileInput) => {
-    setLoading(true);
-    const result = await updateProfile(data);
-    if (result.error) {
-      toast.error(result.error);
-    } else {
-      toast.success("Profile updated");
-    }
-    setLoading(false);
+  const onSubmit = (data: ProfileInput) => {
+    startTransition(async () => {
+      const result = await updateProfile(data);
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Profile updated");
+      }
+    });
   };
 
   return (
@@ -336,8 +336,8 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           />
         </div>
 
-        <Button type="submit" disabled={loading}>
-          {loading ? "Saving..." : "Save Changes"}
+        <Button type="submit" disabled={isPending}>
+          {isPending ? "Saving..." : "Save Changes"}
         </Button>
       </form>
     </Form>

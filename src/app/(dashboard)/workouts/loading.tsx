@@ -13,7 +13,11 @@ export default function WorkoutsLoading() {
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <Card key={i} className="overflow-hidden">
+          <Card
+            key={i}
+            className="overflow-hidden animate-in fade-in fill-mode-both"
+            style={{ animationDelay: `${i * 75}ms` }}
+          >
             <Skeleton className="aspect-video w-full" />
             <div className="p-4 space-y-2">
               <Skeleton className="h-5 w-32" />

@@ -5,39 +5,48 @@ import { Dumbbell } from "lucide-react";
 import { WorkoutCard } from "./workout-card";
 import { WorkoutSearch } from "./workout-search";
 import { LogWorkoutDialog } from "./log-workout-dialog";
+import { DataPagination } from "@/components/data-pagination";
 import type { Tag, Workout, WorkoutWithTags } from "@/lib/types";
 
 interface WorkoutCatalogProps {
   workouts: WorkoutWithTags[];
   tags: Tag[];
   partners?: { id: string; full_name: string | null }[];
+  initialSearch: string;
+  currentPage: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
 }
 
-export function WorkoutCatalog({ workouts, tags, partners }: WorkoutCatalogProps) {
-  const [search, setSearch] = useState("");
+export function WorkoutCatalog({
+  workouts,
+  tags,
+  partners,
+  initialSearch,
+  currentPage,
+  pageSize,
+  totalCount,
+  totalPages,
+}: WorkoutCatalogProps) {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [logWorkout, setLogWorkout] = useState<Workout | null>(null);
 
+  // Tag filtering stays client-side (Supabase can't filter parent rows by nested join columns)
   const filtered = useMemo(() => {
-    return workouts.filter((w) => {
-      const matchesSearch = w.name
-        .toLowerCase()
-        .includes(search.toLowerCase());
-      const matchesTag = selectedTag
-        ? w.workout_tags.some((wt) => wt.tag_id === selectedTag)
-        : true;
-      return matchesSearch && matchesTag;
-    });
-  }, [workouts, search, selectedTag]);
+    if (!selectedTag) return workouts;
+    return workouts.filter((w) =>
+      w.workout_tags.some((wt) => wt.tag_id === selectedTag)
+    );
+  }, [workouts, selectedTag]);
 
   return (
     <>
       <WorkoutSearch
-        search={search}
-        onSearchChange={setSearch}
         tags={tags}
         selectedTag={selectedTag}
         onTagChange={setSelectedTag}
+        initialSearch={initialSearch}
       />
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -56,6 +65,12 @@ export function WorkoutCatalog({ workouts, tags, partners }: WorkoutCatalogProps
           ))}
         </div>
       )}
+      <DataPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        pageSize={pageSize}
+      />
       <LogWorkoutDialog
         workout={logWorkout}
         open={!!logWorkout}

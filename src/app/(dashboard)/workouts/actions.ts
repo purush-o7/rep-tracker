@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { WorkoutSetInput } from "@/lib/validators/workout-log";
+import { recalculateStreak } from "@/lib/data/streaks";
 
 export async function logWorkout(data: {
   workout_id: string;
@@ -89,20 +90,90 @@ export async function logWorkout(data: {
 
   if (setsError) return { error: setsError.message };
 
+  await recalculateStreak(supabase, targetUserId);
+
   revalidatePath("/my-logs");
   revalidatePath("/dashboard");
   revalidatePath("/reports");
   return { data: log };
 }
 
+export async function updateLog(data: {
+  log_id: string;
+  notes?: string;
+  sets: WorkoutSetInput[];
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  // Verify ownership
+  const { data: log } = await supabase
+    .from("workout_logs")
+    .select("id")
+    .eq("id", data.log_id)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!log) return { error: "Log not found" };
+
+  // Update notes
+  const { error: noteError } = await supabase
+    .from("workout_logs")
+    .update({ notes: data.notes || null })
+    .eq("id", data.log_id);
+
+  if (noteError) return { error: noteError.message };
+
+  // Delete old sets and insert new ones
+  const { error: deleteError } = await supabase
+    .from("workout_sets")
+    .delete()
+    .eq("log_id", data.log_id);
+
+  if (deleteError) return { error: deleteError.message };
+
+  const setsToInsert = data.sets.map((set) => ({
+    log_id: data.log_id,
+    set_number: set.set_number,
+    reps: set.reps,
+    weight_kg: set.weight_kg,
+  }));
+
+  const { error: setsError } = await supabase
+    .from("workout_sets")
+    .insert(setsToInsert);
+
+  if (setsError) return { error: setsError.message };
+
+  await recalculateStreak(supabase, user.id);
+
+  revalidatePath("/my-logs");
+  revalidatePath("/dashboard");
+  revalidatePath("/reports");
+  return { data: true };
+}
+
 export async function deleteLog(logId: string) {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
   const { error } = await supabase
     .from("workout_logs")
     .delete()
-    .eq("id", logId);
+    .eq("id", logId)
+    .eq("user_id", user.id);
 
   if (error) return { error: error.message };
+
+  await recalculateStreak(supabase, user.id);
 
   revalidatePath("/my-logs");
   revalidatePath("/dashboard");
