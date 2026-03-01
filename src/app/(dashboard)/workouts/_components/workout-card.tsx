@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Dumbbell } from "lucide-react";
+import { Dumbbell, Youtube } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,7 +50,7 @@ export function WorkoutCard({ workout, onLog }: WorkoutCardProps) {
           </Link>
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 pb-2">
+      <CardContent className="flex-1 space-y-2 pb-2">
         <div className="flex flex-wrap gap-1">
           {workout.workout_tags.map((wt) => (
             <Badge key={wt.tag_id} variant="secondary" className="text-xs">
@@ -58,6 +58,12 @@ export function WorkoutCard({ workout, onLog }: WorkoutCardProps) {
             </Badge>
           ))}
         </div>
+        {workout.youtube_url && (
+          <div className="flex items-center gap-1 text-xs text-red-500">
+            <Youtube className="h-3.5 w-3.5" />
+            <span>Video tutorial</span>
+          </div>
+        )}
       </CardContent>
       <CardFooter>
         <Button className="w-full" onClick={onLog}>

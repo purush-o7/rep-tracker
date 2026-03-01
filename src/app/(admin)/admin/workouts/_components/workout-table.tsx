@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2, ImagePlus } from "lucide-react";
+import { Pencil, Trash2, ImagePlus, Youtube } from "lucide-react";
 import { toast } from "sonner";
 import { deleteWorkout } from "../actions";
 import { WorkoutForm } from "./workout-form";
@@ -53,7 +53,7 @@ export function WorkoutTable({ workouts, tags }: WorkoutTableProps) {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Tags</TableHead>
-              <TableHead>Images</TableHead>
+              <TableHead>Media</TableHead>
               <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -70,7 +70,21 @@ export function WorkoutTable({ workouts, tags }: WorkoutTableProps) {
                     ))}
                   </div>
                 </TableCell>
-                <TableCell>{workout.workout_images?.length ?? 0}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span>{workout.workout_images?.length ?? 0} img</span>
+                    {workout.youtube_url && (
+                      <a
+                        href={workout.youtube_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-red-500 hover:text-red-600"
+                      >
+                        <Youtube className="h-4 w-4" />
+                      </a>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>
                   <div className="flex gap-1">
                     <Button
@@ -137,13 +151,27 @@ export function WorkoutTable({ workouts, tags }: WorkoutTableProps) {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-2">
               <div className="flex flex-wrap gap-1">
                 {workout.workout_tags.map((wt) => (
                   <Badge key={wt.tag_id} variant="secondary">
                     {wt.tags.name}
                   </Badge>
                 ))}
+              </div>
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <span>{workout.workout_images?.length ?? 0} images</span>
+                {workout.youtube_url && (
+                  <a
+                    href={workout.youtube_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-red-500"
+                  >
+                    <Youtube className="h-3.5 w-3.5" />
+                    YouTube
+                  </a>
+                )}
               </div>
             </CardContent>
           </Card>

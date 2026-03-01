@@ -6,13 +6,18 @@ import { createClient } from "@/lib/supabase/server";
 export async function createWorkout(formData: {
   name: string;
   description?: string;
+  youtube_url?: string;
   tag_ids: string[];
 }) {
   const supabase = await createClient();
 
   const { data: workout, error } = await supabase
     .from("workouts")
-    .insert({ name: formData.name, description: formData.description || null })
+    .insert({
+      name: formData.name,
+      description: formData.description || null,
+      youtube_url: formData.youtube_url || null,
+    })
     .select()
     .single();
 
@@ -33,13 +38,17 @@ export async function createWorkout(formData: {
 
 export async function updateWorkout(
   id: string,
-  formData: { name: string; description?: string; tag_ids: string[] }
+  formData: { name: string; description?: string; youtube_url?: string; tag_ids: string[] }
 ) {
   const supabase = await createClient();
 
   const { error } = await supabase
     .from("workouts")
-    .update({ name: formData.name, description: formData.description || null })
+    .update({
+      name: formData.name,
+      description: formData.description || null,
+      youtube_url: formData.youtube_url || null,
+    })
     .eq("id", id);
 
   if (error) return { error: error.message };

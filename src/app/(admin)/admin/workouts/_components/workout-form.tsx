@@ -47,6 +47,7 @@ export function WorkoutForm({
     defaultValues: {
       name: workout?.name ?? "",
       description: workout?.description ?? "",
+      youtube_url: workout?.youtube_url ?? "",
       tag_ids: workout?.workout_tags?.map((wt) => wt.tag_id) ?? [],
     },
   });
@@ -99,6 +100,22 @@ export function WorkoutForm({
                   <FormControl>
                     <Textarea
                       placeholder="Describe the exercise..."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="youtube_url"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>YouTube URL</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="https://www.youtube.com/watch?v=..."
                       {...field}
                     />
                   </FormControl>
