@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Dumbbell, ArrowLeft, Shield } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  Dumbbell,
+  Tag,
+  ArrowLeft,
+  Shield,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -17,8 +24,10 @@ import {
 } from "@/components/ui/sidebar";
 
 const adminNavItems = [
-  { label: "Users", href: "/admin", icon: Users },
+  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { label: "Users", href: "/admin/users", icon: Users },
   { label: "Workout Catalog", href: "/admin/workouts", icon: Dumbbell },
+  { label: "Tags", href: "/admin/tags", icon: Tag },
 ];
 
 export function AdminSidebar() {
@@ -46,7 +55,11 @@ export function AdminSidebar() {
                     : pathname.startsWith(item.href);
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={item.label}
+                    >
                       <Link href={item.href}>
                         <item.icon className="h-4 w-4" />
                         <span>{item.label}</span>

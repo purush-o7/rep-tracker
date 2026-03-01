@@ -45,6 +45,54 @@ export default async function AdminWorkoutsPage({
     supabase.from("tags").select("*").order("name"),
   ]);
 
+  const workouts = workoutsRes.data ?? [];
+  const workoutIds = workouts.map((w) => w.id);
+
+  // Fetch usage stats for these workouts
+  let workoutStats: Record<
+    string,
+    { logCount: number; uniqueUsers: number; lastLogged: string | null }
+  > = {};
+
+  if (workoutIds.length > 0) {
+    const { data: logs } = await supabase
+      .from("workout_logs")
+      .select("workout_id, user_id, performed_at")
+      .in("workout_id", workoutIds);
+
+    const statsMap: Record<
+      string,
+      { users: Set<string>; count: number; lastLogged: string | null }
+    > = {};
+
+    (logs ?? []).forEach((log) => {
+      if (!statsMap[log.workout_id]) {
+        statsMap[log.workout_id] = {
+          users: new Set(),
+          count: 0,
+          lastLogged: null,
+        };
+      }
+      const stat = statsMap[log.workout_id];
+      stat.count++;
+      stat.users.add(log.user_id);
+      if (!stat.lastLogged || log.performed_at > stat.lastLogged) {
+        stat.lastLogged = log.performed_at;
+      }
+    });
+
+    workoutStats = Object.fromEntries(
+      Object.entries(statsMap).map(([id, stat]) => [
+        id,
+        {
+          logCount: stat.count,
+          uniqueUsers: stat.users.size,
+          lastLogged: stat.lastLogged,
+        },
+      ])
+    );
+  }
+
   const totalCount = workoutsRes.count ?? 0;
   const totalPages = getTotalPages(totalCount, pagination.pageSize);
   const currentPage = clampPage(pagination.page, totalPages);
@@ -56,8 +104,9 @@ export default async function AdminWorkoutsPage({
         <WorkoutFormWrapper tags={tagsRes.data ?? []} />
       </div>
       <WorkoutTable
-        workouts={workoutsRes.data ?? []}
+        workouts={workouts}
         tags={tagsRes.data ?? []}
+        workoutStats={workoutStats}
         currentPage={currentPage}
         pageSize={pagination.pageSize}
         totalCount={totalCount}

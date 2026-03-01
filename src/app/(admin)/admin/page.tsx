@@ -1,110 +1,59 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { UsersTable } from "./_components/users-table";
-import {
-  parsePaginationParams,
-  toRange,
-  getTotalPages,
-  clampPage,
-} from "@/lib/pagination";
+import { Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { AdminStatsCards } from "./_components/admin-stats-cards";
+import { AdminDashboardCharts } from "./_components/admin-dashboard-charts";
 
 export const metadata: Metadata = {
-  title: "Users - Admin - GymTracker",
+  title: "Admin Dashboard - GymTracker",
 };
 
-export default async function AdminUsersPage({
-  searchParams,
-}: {
-  searchParams: Promise<{
-    q?: string;
-    page?: string;
-    pageSize?: string;
-  }>;
-}) {
-  const params = await searchParams;
-  const supabase = await createClient();
-  const pagination = parsePaginationParams(params);
-  const { from, to } = toRange(pagination);
-
-  // 1. Paginated profiles with count + optional search
-  let profileQuery = supabase
-    .from("profiles")
-    .select("*", { count: "exact" })
-    .order("created_at", { ascending: false });
-
-  if (params.q) {
-    profileQuery = profileQuery.or(
-      `full_name.ilike.%${params.q}%,handle.ilike.%${params.q}%`
-    );
-  }
-
-  profileQuery = profileQuery.range(from, to);
-
-  const { data: profiles, count } = await profileQuery;
-
-  // 2. Get auth users for email (using admin client)
-  const admin = createAdminClient();
-  const {
-    data: { users: authUsers },
-  } = await admin.auth.admin.listUsers();
-
-  // 3. Fetch workout stats ONLY for this page's users
-  const profileIds = (profiles ?? []).map((p) => p.id);
-  let logCounts: { user_id: string; performed_at: string }[] = [];
-  if (profileIds.length > 0) {
-    const { data } = await supabase
-      .from("workout_logs")
-      .select("user_id, performed_at")
-      .in("user_id", profileIds);
-    logCounts = data ?? [];
-  }
-
-  const userWorkoutMap: Record<
-    string,
-    { total: number; lastWorkout: string | null }
-  > = {};
-  logCounts.forEach((log) => {
-    if (!userWorkoutMap[log.user_id]) {
-      userWorkoutMap[log.user_id] = { total: 0, lastWorkout: null };
-    }
-    userWorkoutMap[log.user_id].total++;
-    if (
-      !userWorkoutMap[log.user_id].lastWorkout ||
-      log.performed_at > userWorkoutMap[log.user_id].lastWorkout!
-    ) {
-      userWorkoutMap[log.user_id].lastWorkout = log.performed_at;
-    }
-  });
-
-  const users = (profiles ?? []).map((profile) => {
-    const authUser = authUsers?.find((u) => u.id === profile.id);
-    const activity = userWorkoutMap[profile.id] ?? {
-      total: 0,
-      lastWorkout: null,
-    };
-    return {
-      ...profile,
-      email: authUser?.email ?? "unknown",
-      total_workouts: activity.total,
-      last_workout: activity.lastWorkout,
-    };
-  });
-
-  const totalCount = count ?? 0;
-  const totalPages = getTotalPages(totalCount, pagination.pageSize);
-  const currentPage = clampPage(pagination.page, totalPages);
-
+function StatsCardsSkeleton() {
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Users</h1>
-      <UsersTable
-        users={users}
-        currentPage={currentPage}
-        pageSize={pagination.pageSize}
-        totalCount={totalCount}
-        totalPages={totalPages}
-      />
+    <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Card key={i}>
+          <CardHeader className="pb-2">
+            <Skeleton className="h-4 w-24" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="mt-1 h-3 w-12" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function ChartsSkeleton() {
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Card key={i}>
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-[200px] w-full" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+export default function AdminDashboardPage() {
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+      <Suspense fallback={<StatsCardsSkeleton />}>
+        <AdminStatsCards />
+      </Suspense>
+      <Suspense fallback={<ChartsSkeleton />}>
+        <AdminDashboardCharts />
+      </Suspense>
     </div>
   );
 }

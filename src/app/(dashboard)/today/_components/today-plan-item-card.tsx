@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, X, Dumbbell } from "lucide-react";
+import { CheckCircle2, X, Dumbbell, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { removeFromPlan } from "../actions";
@@ -18,19 +19,25 @@ export function TodayPlanItemCard({
   index,
   onLogSets,
 }: TodayPlanItemCardProps) {
+  const [removing, setRemoving] = useState(false);
+
   const handleRemove = async () => {
+    setRemoving(true);
     const result = await removeFromPlan(item.id);
     if (result.error) {
       toast.error(result.error);
+      setRemoving(false);
     }
   };
 
   return (
     <div
       className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
-        item.is_completed
-          ? "opacity-60 bg-muted/30 border-green-500/20"
-          : "bg-card"
+        removing
+          ? "opacity-40 pointer-events-none"
+          : item.is_completed
+            ? "opacity-60 bg-muted/30 border-green-500/20"
+            : "bg-card"
       }`}
     >
       {/* Number / Check indicator */}
@@ -72,8 +79,13 @@ export function TodayPlanItemCard({
           size="icon"
           className="h-7 w-7 text-muted-foreground hover:text-destructive"
           onClick={handleRemove}
+          disabled={removing}
         >
-          <X className="h-4 w-4" />
+          {removing ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <X className="h-4 w-4" />
+          )}
         </Button>
       </div>
     </div>

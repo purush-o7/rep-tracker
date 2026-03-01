@@ -2,11 +2,27 @@
 
 import { useState } from "react";
 import { Plus, CalendarCheck, Dumbbell } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { SortableItem } from "@/components/sortable-item";
 import { TodayPlanItemCard } from "./today-plan-item-card";
 import { AddWorkoutSheet } from "./add-workout-sheet";
 import { TodayLogSetSheet } from "./today-log-set-sheet";
+import { reorderPlanItems } from "../actions";
 import type { DailyPlanItemWithWorkout, Workout, WorkoutGroup } from "@/lib/types";
 
 interface TodayPlanListProps {
@@ -23,14 +39,33 @@ export function TodayPlanList({
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [logSheetOpen, setLogSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<DailyPlanItemWithWorkout | null>(null);
+  const [items, setItems] = useState(planItems);
 
-  const completedCount = planItems.filter((i) => i.is_completed).length;
-  const totalCount = planItems.length;
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  );
+
+  const completedCount = items.filter((i) => i.is_completed).length;
+  const totalCount = items.length;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   const handleLogSets = (item: DailyPlanItemWithWorkout) => {
     setSelectedItem(item);
     setLogSheetOpen(true);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setItems((prev) => {
+      const oldIndex = prev.findIndex((i) => i.id === active.id);
+      const newIndex = prev.findIndex((i) => i.id === over.id);
+      const reordered = arrayMove(prev, oldIndex, newIndex);
+      reorderPlanItems(reordered.map((i) => i.id));
+      return reordered;
+    });
   };
 
   if (planItems.length === 0) {
@@ -83,16 +118,28 @@ export function TodayPlanList({
       </div>
 
       {/* Plan items */}
-      <div className="space-y-2">
-        {planItems.map((item, index) => (
-          <TodayPlanItemCard
-            key={item.id}
-            item={item}
-            index={index}
-            onLogSets={handleLogSets}
-          />
-        ))}
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={items.map((i) => i.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-2">
+            {items.map((item, index) => (
+              <SortableItem key={item.id} id={item.id}>
+                <TodayPlanItemCard
+                  item={item}
+                  index={index}
+                  onLogSets={handleLogSets}
+                />
+              </SortableItem>
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       {/* Add more button */}
       <Button

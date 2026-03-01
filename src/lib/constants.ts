@@ -25,6 +25,8 @@ export const NAV_ITEMS = [
 ] as const;
 
 export const ADMIN_NAV_ITEMS = [
-  { label: "Users", href: "/admin", icon: "Users" },
+  { label: "Dashboard", href: "/admin", icon: "LayoutDashboard" },
+  { label: "Users", href: "/admin/users", icon: "Users" },
   { label: "Workout Catalog", href: "/admin/workouts", icon: "Dumbbell" },
+  { label: "Tags", href: "/admin/tags", icon: "Tag" },
 ] as const;
