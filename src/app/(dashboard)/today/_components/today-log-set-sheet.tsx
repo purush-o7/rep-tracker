@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Dumbbell, Plus, Save } from "lucide-react";
+import { Dumbbell, Plus, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ResponsiveSheetDrawer } from "@/components/responsive-sheet-drawer";
 import { SetInputRow } from "@/app/(dashboard)/workouts/_components/set-input-row";
 import { logWorkoutFromPlan } from "../actions";
+import { vibrate } from "@/lib/utils";
 import type { DailyPlanItemWithWorkout } from "@/lib/types";
 
 interface TodayLogSetSheetProps {
@@ -28,7 +30,60 @@ export function TodayLogSetSheet({
 }: TodayLogSetSheetProps) {
   const [sets, setSets] = useState<SetData[]>([{ reps: 0, weight_kg: 0 }]);
   const [notes, setNotes] = useState("");
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
+
+  const logMutation = useMutation({
+    mutationFn: (data: Parameters<typeof logWorkoutFromPlan>[0]) => logWorkoutFromPlan(data),
+    onMutate: async (newLog) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["today-plan"] });
+
+      // Snapshot the previous value
+      const previousPlan = queryClient.getQueryData<DailyPlanItemWithWorkout[]>(["today-plan"]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData<DailyPlanItemWithWorkout[]>(["today-plan"], (old) => {
+        if (!old) return [];
+        return old.map((item) => {
+          if (item.id === newLog.plan_item_id) {
+            return {
+              ...item,
+              is_completed: true,
+              workout_log_id: "optimistic-id", // Placeholder
+            };
+          }
+          return item;
+        });
+      });
+
+      return { previousPlan };
+    },
+    onError: (err, newLog, context) => {
+      // Rollback on error
+      if (context?.previousPlan) {
+        queryClient.setQueryData(["today-plan"], context.previousPlan);
+      }
+      toast.error("Failed to save sets. Please try again.");
+    },
+    onSuccess: (result) => {
+      if (result.error) {
+        toast.error(result.error);
+        // Let the settle handle the refetch to be safe
+      } else {
+        vibrate(50);
+        toast.success("Sets logged!");
+        onOpenChange(false);
+        setSets([{ reps: 0, weight_kg: 0 }]);
+        setNotes("");
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success to sync with server
+      queryClient.invalidateQueries({ queryKey: ["today-plan"] });
+      queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
+      queryClient.invalidateQueries({ queryKey: ["streaks"] });
+    },
+  });
 
   const addSet = () => setSets([...sets, { reps: 0, weight_kg: 0 }]);
 
@@ -41,7 +96,7 @@ export function TodayLogSetSheet({
     setSets(updated);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!item) return;
 
     const validSets = sets.filter((s) => s.reps > 0);
@@ -50,8 +105,7 @@ export function TodayLogSetSheet({
       return;
     }
 
-    setLoading(true);
-    const result = await logWorkoutFromPlan({
+    logMutation.mutate({
       plan_item_id: item.id,
       workout_id: item.workout_id,
       notes: notes || undefined,
@@ -61,16 +115,6 @@ export function TodayLogSetSheet({
         weight_kg: s.weight_kg,
       })),
     });
-
-    if (result.error) {
-      toast.error(result.error);
-    } else {
-      toast.success("Sets logged!");
-      onOpenChange(false);
-      setSets([{ reps: 0, weight_kg: 0 }]);
-      setNotes("");
-    }
-    setLoading(false);
   };
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -93,10 +137,19 @@ export function TodayLogSetSheet({
           className="w-full"
           size="lg"
           onClick={handleSubmit}
-          disabled={loading}
+          disabled={logMutation.isPending}
         >
-          <Save className="mr-2 h-4 w-4" />
-          {loading ? "Saving..." : "Save Sets"}
+          {logMutation.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="mr-2 h-4 w-4" />
+              Save Sets
+            </>
+          )}
         </Button>
       }
     >

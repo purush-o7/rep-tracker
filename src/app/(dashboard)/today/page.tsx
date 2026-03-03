@@ -12,7 +12,7 @@ export default async function TodayPage() {
 
   const today = new Date().toISOString().split("T")[0];
 
-  const [planResult, routinesResult, workoutsResult] = await Promise.all([
+  const [planResult, routinesResult] = await Promise.all([
     // 1. Today's plan items with workout details
     supabase
       .from("daily_plan_items")
@@ -27,20 +27,13 @@ export default async function TodayPage() {
       .select("*, workout_group_items(count)")
       .eq("user_id", user.id)
       .order("name"),
-
-    // 3. All workouts (id + name for picker)
-    supabase
-      .from("workouts")
-      .select("id, name")
-      .order("name"),
   ]);
 
   return (
     <div className="space-y-4">
       <TodayPlanList
-        planItems={planResult.data ?? []}
+        initialPlanItems={planResult.data ?? []}
         routines={routinesResult.data ?? []}
-        workouts={workoutsResult.data ?? []}
       />
     </div>
   );

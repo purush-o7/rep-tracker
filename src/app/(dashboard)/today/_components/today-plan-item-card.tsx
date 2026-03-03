@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, X, Dumbbell, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { removeFromPlan } from "../actions";
 import type { DailyPlanItemWithWorkout } from "@/lib/types";
@@ -19,21 +19,46 @@ export function TodayPlanItemCard({
   index,
   onLogSets,
 }: TodayPlanItemCardProps) {
-  const [removing, setRemoving] = useState(false);
+  const queryClient = useQueryClient();
 
-  const handleRemove = async () => {
-    setRemoving(true);
-    const result = await removeFromPlan(item.id);
-    if (result.error) {
-      toast.error(result.error);
-      setRemoving(false);
-    }
+  const removeMutation = useMutation({
+    mutationFn: (id: string) => removeFromPlan(id),
+    onMutate: async (deletedId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["today-plan"] });
+
+      // Snapshot the previous value
+      const previousPlan = queryClient.getQueryData<DailyPlanItemWithWorkout[]>(["today-plan"]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData<DailyPlanItemWithWorkout[]>(["today-plan"], (old) => {
+        if (!old) return [];
+        return old.filter((item) => item.id !== deletedId);
+      });
+
+      return { previousPlan };
+    },
+    onError: (err, newLog, context) => {
+      if (context?.previousPlan) {
+        queryClient.setQueryData(["today-plan"], context.previousPlan);
+      }
+      toast.error("Failed to remove item.");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["today-plan"] });
+    },
+  });
+
+  const handleRemove = () => {
+    removeMutation.mutate(item.id);
   };
+
+  const isPending = removeMutation.isPending;
 
   return (
     <div
       className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
-        removing
+        isPending
           ? "opacity-40 pointer-events-none"
           : item.is_completed
             ? "opacity-60 bg-muted/30 border-green-500/20"
@@ -69,7 +94,7 @@ export function TodayPlanItemCard({
             Done
           </span>
         ) : (
-          <Button size="sm" variant="outline" onClick={() => onLogSets(item)}>
+          <Button size="sm" variant="outline" onClick={() => onLogSets(item)} disabled={isPending}>
             <Dumbbell className="mr-1.5 h-3.5 w-3.5" />
             Log Sets
           </Button>
@@ -79,9 +104,9 @@ export function TodayPlanItemCard({
           size="icon"
           className="h-7 w-7 text-muted-foreground hover:text-destructive"
           onClick={handleRemove}
-          disabled={removing}
+          disabled={isPending}
         >
-          {removing ? (
+          {isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <X className="h-4 w-4" />
