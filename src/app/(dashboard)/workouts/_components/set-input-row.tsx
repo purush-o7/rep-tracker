@@ -30,18 +30,21 @@ export function SetInputRow({
       </span>
       <Input
         type="number"
+        inputMode="numeric"
+        pattern="[0-9]*"
         placeholder="Reps"
         value={reps || ""}
         onChange={(e) => onRepsChange(Number(e.target.value))}
-        className="w-20"
+        className="w-20 text-base md:text-sm"
         min={1}
       />
       <Input
         type="number"
+        inputMode="decimal"
         placeholder="kg"
         value={weight || ""}
         onChange={(e) => onWeightChange(Number(e.target.value))}
-        className="w-20"
+        className="w-20 text-base md:text-sm"
         min={0}
         step={0.5}
       />
