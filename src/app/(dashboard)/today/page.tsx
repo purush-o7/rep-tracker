@@ -19,7 +19,7 @@ export default async function TodayPage() {
     // 1. Today's plan items with workout details
     supabase
       .from("daily_plan_items")
-      .select("*, workouts(*)")
+      .select("*, workouts(*, workout_tags(tags(*)))")
       .eq("user_id", user.id)
       .eq("plan_date", today)
       .order("sort_order"),

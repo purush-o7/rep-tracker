@@ -17,10 +17,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { Workout } from "@/lib/types";
+import { MuscleTags } from "@/components/muscle-tags";
+import type { TaggedWorkout } from "@/lib/types";
 
 interface WorkoutPickerProps {
-  workouts: Workout[];
+  workouts: TaggedWorkout[];
   selectedIds: string[];
   onSelect: (workoutId: string) => void;
 }
@@ -65,11 +66,14 @@ export function WorkoutPicker({
                   >
                     <Check
                       className={cn(
-                        "mr-2 h-4 w-4",
+                        "mr-2 h-4 w-4 shrink-0",
                         isSelected ? "opacity-100" : "opacity-0"
                       )}
                     />
-                    {workout.name}
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="truncate">{workout.name}</span>
+                      <MuscleTags tags={workout.workout_tags} max={3} />
+                    </span>
                   </CommandItem>
                 );
               })}

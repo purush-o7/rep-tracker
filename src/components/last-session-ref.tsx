@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getLastSession } from "@/app/(dashboard)/workouts/actions";
+import { formatLoggedSet } from "@/lib/set-entry";
 import type { LastSession } from "@/lib/types";
 
 interface LastSessionRefProps {
@@ -64,7 +65,7 @@ export function LastSessionRef({ workoutId, enabled, onApply }: LastSessionRefPr
             key={s.set_number}
             className="rounded-md border bg-background px-2 py-1 font-mono text-xs text-muted-foreground"
           >
-            {s.set_number}: {s.reps} &times; {s.weight_kg} kg
+            {s.set_number}: {formatLoggedSet(s)}
           </span>
         ))}
       </div>

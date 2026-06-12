@@ -375,3 +375,15 @@ FROM (VALUES
 ) AS v(name, url)
 WHERE lower(w.name) = lower(v.name)
   AND w.youtube_url IS NULL;
+
+-- 4. Log types for non rep-based exercises (default is 'weight_reps')
+UPDATE public.workouts SET log_type = 'duration'
+WHERE lower(name) IN (
+  'plank', 'side plank', 'superman hold', 'plate pinch', 'farmer''s carry',
+  'jump rope', 'stair climber', 'elliptical', 'high knees', 'jumping jacks',
+  'mountain climbers'
+) AND log_type <> 'duration';
+
+UPDATE public.workouts SET log_type = 'distance'
+WHERE lower(name) IN ('treadmill run', 'rowing machine', 'cycling')
+  AND log_type <> 'distance';

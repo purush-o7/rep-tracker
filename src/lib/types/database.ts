@@ -86,6 +86,7 @@ export type Database = {
           name: string;
           description: string | null;
           youtube_url: string | null;
+          log_type: "weight_reps" | "duration" | "distance";
           created_at: string;
           updated_at: string;
         };
@@ -94,6 +95,7 @@ export type Database = {
           name: string;
           description?: string | null;
           youtube_url?: string | null;
+          log_type?: "weight_reps" | "duration" | "distance";
           created_at?: string;
           updated_at?: string;
         };
@@ -102,6 +104,7 @@ export type Database = {
           name?: string;
           description?: string | null;
           youtube_url?: string | null;
+          log_type?: "weight_reps" | "duration" | "distance";
           created_at?: string;
           updated_at?: string;
         };
@@ -164,6 +167,7 @@ export type Database = {
           workout_id: string;
           performed_at: string;
           notes: string | null;
+          is_pr: boolean;
           created_at: string;
         };
         Insert: {
@@ -172,6 +176,7 @@ export type Database = {
           workout_id: string;
           performed_at?: string;
           notes?: string | null;
+          is_pr?: boolean;
           created_at?: string;
         };
         Update: {
@@ -180,6 +185,7 @@ export type Database = {
           workout_id?: string;
           performed_at?: string;
           notes?: string | null;
+          is_pr?: boolean;
           created_at?: string;
         };
       };
@@ -188,22 +194,28 @@ export type Database = {
           id: string;
           log_id: string;
           set_number: number;
-          reps: number;
+          reps: number | null;
           weight_kg: number;
+          duration_seconds: number | null;
+          distance_m: number | null;
         };
         Insert: {
           id?: string;
           log_id: string;
           set_number: number;
-          reps: number;
+          reps?: number | null;
           weight_kg: number;
+          duration_seconds?: number | null;
+          distance_m?: number | null;
         };
         Update: {
           id?: string;
           log_id?: string;
           set_number?: number;
-          reps?: number;
+          reps?: number | null;
           weight_kg?: number;
+          duration_seconds?: number | null;
+          distance_m?: number | null;
         };
       };
       workout_partners: {
@@ -346,6 +358,26 @@ export type Database = {
           log_date?: string;
           weight_kg?: number;
           created_at?: string;
+        };
+      };
+      user_workout_prefs: {
+        Row: {
+          user_id: string;
+          workout_id: string;
+          equipment_note: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          workout_id: string;
+          equipment_note?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          workout_id?: string;
+          equipment_note?: string | null;
+          updated_at?: string;
         };
       };
       weekly_schedule: {

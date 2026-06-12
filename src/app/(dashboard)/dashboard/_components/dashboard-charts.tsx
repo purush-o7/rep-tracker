@@ -20,7 +20,7 @@ export async function DashboardCharts({ userId }: DashboardChartsProps) {
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
   const thirtyDaysAgo = subDays(now, 30);
 
-  const [weeklyRes, allLogsRes, muscleRes] = await Promise.all([
+  const [weeklyRes, allLogsRes, tagsRes, muscleLogsRes] = await Promise.all([
     supabase
       .from("workout_logs")
       .select("performed_at")
@@ -31,10 +31,12 @@ export async function DashboardCharts({ userId }: DashboardChartsProps) {
       .select("performed_at, workouts(name)")
       .eq("user_id", userId)
       .order("performed_at", { ascending: false }),
+    supabase.from("tags").select("name").order("name"),
     supabase
-      .from("muscle_group_activity")
-      .select("*")
-      .eq("user_id", userId),
+      .from("workout_logs")
+      .select("workouts(workout_tags(tags(name)))")
+      .eq("user_id", userId)
+      .gte("performed_at", thirtyDaysAgo.toISOString()),
   ]);
 
   const weeklyLogs = weeklyRes.data ?? [];
@@ -77,13 +79,23 @@ export async function DashboardCharts({ userId }: DashboardChartsProps) {
     .sort((a, b) => b.count - a.count)
     .slice(0, 8);
 
-  // Muscle group data
-  const muscleData = (muscleRes.data ?? []).map(
-    (m: { tag_name: string; workout_count: number }) => ({
-      muscle: m.tag_name,
-      count: m.workout_count,
-    })
-  );
+  // Muscle balance over the last 30 days — includes muscles with zero work,
+  // so neglected groups are visible
+  const tagCounts: Record<string, number> = {};
+  for (const tag of tagsRes.data ?? []) tagCounts[tag.name] = 0;
+  for (const log of muscleLogsRes.data ?? []) {
+    const workout = log.workouts as unknown as {
+      workout_tags: { tags: { name: string } | null }[];
+    } | null;
+    for (const wt of workout?.workout_tags ?? []) {
+      const name = wt.tags?.name;
+      if (name !== undefined && name in tagCounts) tagCounts[name] += 1;
+    }
+  }
+  const muscleData = Object.entries(tagCounts).map(([muscle, count]) => ({
+    muscle,
+    count,
+  }));
 
   return (
     <>

@@ -29,7 +29,9 @@ export type WorkoutGroupWithItems = WorkoutGroup & {
 };
 
 export type DailyPlanItem = Database["public"]["Tables"]["daily_plan_items"]["Row"];
-export type DailyPlanItemWithWorkout = DailyPlanItem & { workouts: Workout };
+export type DailyPlanItemWithWorkout = DailyPlanItem & {
+  workouts: Workout & { workout_tags: { tags: Tag }[] };
+};
 
 export type BodyWeightLog = Database["public"]["Tables"]["body_weight_logs"]["Row"];
 export type WeeklyScheduleEntry = Database["public"]["Tables"]["weekly_schedule"]["Row"];
@@ -44,5 +46,18 @@ export type ExerciseTargets = {
 /** Previous session summary shown while logging sets */
 export type LastSession = {
   performed_at: string;
-  sets: { set_number: number; reps: number; weight_kg: number }[];
+  sets: {
+    set_number: number;
+    reps: number | null;
+    weight_kg: number;
+    duration_seconds: number | null;
+    distance_m: number | null;
+  }[];
 };
+
+export type LogType = Workout["log_type"];
+
+export type UserWorkoutPref = Database["public"]["Tables"]["user_workout_prefs"]["Row"];
+
+/** Workout joined with its muscle group tags */
+export type TaggedWorkout = Workout & { workout_tags: { tags: Tag }[] };

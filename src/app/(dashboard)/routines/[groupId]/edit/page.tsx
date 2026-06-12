@@ -24,7 +24,7 @@ export default async function EditRoutinePage({
       .select("*, workout_group_items(*, workouts(*))")
       .eq("id", groupId)
       .single(),
-    supabase.from("workouts").select("*").order("name"),
+    supabase.from("workouts").select("*, workout_tags(tags(*))").order("name"),
   ]);
 
   if (!groupRes.data) notFound();

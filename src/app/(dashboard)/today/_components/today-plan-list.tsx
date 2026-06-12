@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, CalendarCheck, CalendarClock, Dumbbell, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -61,7 +61,7 @@ export function TodayPlanList({
       const today = new Date().toISOString().split("T")[0];
       const { data, error } = await supabase
         .from("daily_plan_items")
-        .select("*, workouts(*)")
+        .select("*, workouts(*, workout_tags(tags(*)))")
         .eq("user_id", user.id)
         .eq("plan_date", today)
         .order("sort_order");
@@ -72,13 +72,14 @@ export function TodayPlanList({
     initialData: initialPlanItems,
   });
 
-  // Keep a local copy for immediate drag-and-drop feel
+  // Keep a local copy for immediate drag-and-drop feel; sync when query data
+  // changes (state adjustment during render — react.dev "You Might Not Need an Effect")
   const [items, setItems] = useState(planItems);
-
-  // Sync items when query data changes (e.g., after invalidation)
-  useEffect(() => {
+  const [prevPlanItems, setPrevPlanItems] = useState(planItems);
+  if (planItems !== prevPlanItems) {
+    setPrevPlanItems(planItems);
     setItems(planItems);
-  }, [planItems]);
+  }
 
   const reorderMutation = useMutation({
     mutationFn: (orderedIds: string[]) => reorderPlanItems(orderedIds),

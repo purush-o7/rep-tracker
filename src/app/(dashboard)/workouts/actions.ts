@@ -4,6 +4,18 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { WorkoutSetInput } from "@/lib/validators/workout-log";
 import { recalculateStreak } from "@/lib/data/streaks";
+import { checkAndFlagPr } from "@/lib/data/pr";
+
+function mapSetForInsert(logId: string) {
+  return (set: WorkoutSetInput) => ({
+    log_id: logId,
+    set_number: set.set_number,
+    reps: set.reps ?? null,
+    weight_kg: set.weight_kg ?? 0,
+    duration_seconds: set.duration_seconds ?? null,
+    distance_m: set.distance_m ?? null,
+  });
+}
 
 export async function logWorkout(data: {
   workout_id: string;
@@ -77,25 +89,23 @@ export async function logWorkout(data: {
 
   if (error) return { error: error.message };
 
-  const setsToInsert = data.sets.map((set) => ({
-    log_id: log.id,
-    set_number: set.set_number,
-    reps: set.reps,
-    weight_kg: set.weight_kg,
-  }));
-
   const { error: setsError } = await supabase
     .from("workout_sets")
-    .insert(setsToInsert);
+    .insert(data.sets.map(mapSetForInsert(log.id)));
 
   if (setsError) return { error: setsError.message };
 
   await recalculateStreak(supabase, targetUserId);
 
+  const pr =
+    targetUserId === user.id
+      ? await checkAndFlagPr(supabase, user.id, data.workout_id, log.id, data.sets)
+      : null;
+
   revalidatePath("/my-logs");
   revalidatePath("/dashboard");
   revalidatePath("/reports");
-  return { data: log };
+  return { data: log, pr };
 }
 
 export async function getLastSession(workoutId: string) {
@@ -108,7 +118,7 @@ export async function getLastSession(workoutId: string) {
 
   const { data: log, error } = await supabase
     .from("workout_logs")
-    .select("performed_at, workout_sets(set_number, reps, weight_kg)")
+    .select("performed_at, workout_sets(set_number, reps, weight_kg, duration_seconds, distance_m)")
     .eq("user_id", user.id)
     .eq("workout_id", workoutId)
     .order("performed_at", { ascending: false })
@@ -164,16 +174,9 @@ export async function updateLog(data: {
 
   if (deleteError) return { error: deleteError.message };
 
-  const setsToInsert = data.sets.map((set) => ({
-    log_id: data.log_id,
-    set_number: set.set_number,
-    reps: set.reps,
-    weight_kg: set.weight_kg,
-  }));
-
   const { error: setsError } = await supabase
     .from("workout_sets")
-    .insert(setsToInsert);
+    .insert(data.sets.map(mapSetForInsert(data.log_id)));
 
   if (setsError) return { error: setsError.message };
 
@@ -182,6 +185,45 @@ export async function updateLog(data: {
   revalidatePath("/my-logs");
   revalidatePath("/dashboard");
   revalidatePath("/reports");
+  return { data: true };
+}
+
+export async function getWorkoutPref(workoutId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  const { data } = await supabase
+    .from("user_workout_prefs")
+    .select("equipment_note")
+    .eq("user_id", user.id)
+    .eq("workout_id", workoutId)
+    .maybeSingle();
+
+  return { data: data?.equipment_note ?? null };
+}
+
+export async function saveWorkoutPref(workoutId: string, equipmentNote: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  const note = equipmentNote.trim().slice(0, 300);
+
+  const { error } = await supabase.from("user_workout_prefs").upsert({
+    user_id: user.id,
+    workout_id: workoutId,
+    equipment_note: note || null,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) return { error: error.message };
   return { data: true };
 }
 

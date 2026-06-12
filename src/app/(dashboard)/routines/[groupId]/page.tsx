@@ -20,7 +20,7 @@ export default async function GroupDetailPage({
 
   const { data: group } = await supabase
     .from("workout_groups")
-    .select("*, workout_group_items(*, workouts(*))")
+    .select("*, workout_group_items(*, workouts(*, workout_tags(tags(*))))")
     .eq("id", groupId)
     .single();
 

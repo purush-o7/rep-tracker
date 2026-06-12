@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { WorkoutSetInput } from "@/lib/validators/workout-log";
+import { checkAndFlagPr } from "@/lib/data/pr";
 
 export async function addWorkoutToPlan(workoutId: string) {
   const supabase = await createClient();
@@ -182,8 +183,10 @@ export async function logWorkoutFromPlan(data: {
   const setsToInsert = data.sets.map((set) => ({
     log_id: log.id,
     set_number: set.set_number,
-    reps: set.reps,
-    weight_kg: set.weight_kg,
+    reps: set.reps ?? null,
+    weight_kg: set.weight_kg ?? 0,
+    duration_seconds: set.duration_seconds ?? null,
+    distance_m: set.distance_m ?? null,
   }));
 
   const { error: setsError } = await supabase
@@ -203,9 +206,17 @@ export async function logWorkoutFromPlan(data: {
 
   if (updateError) return { error: updateError.message };
 
+  const pr = await checkAndFlagPr(
+    supabase,
+    user.id,
+    data.workout_id,
+    log.id,
+    data.sets
+  );
+
   revalidatePath("/today");
   revalidatePath("/my-logs");
   revalidatePath("/dashboard");
   revalidatePath("/reports");
-  return { data: log };
+  return { data: log, pr };
 }

@@ -5,10 +5,11 @@ import { Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LogSetSheet } from "./log-set-sheet";
-import type { Workout, WorkoutGroupItem } from "@/lib/types";
+import { MuscleTags } from "@/components/muscle-tags";
+import type { TaggedWorkout, WorkoutGroupItem } from "@/lib/types";
 
 interface RoutineWorkoutListProps {
-  items: (WorkoutGroupItem & { workouts: Workout })[];
+  items: (WorkoutGroupItem & { workouts: TaggedWorkout })[];
 }
 
 function formatTargets(item: WorkoutGroupItem) {
@@ -23,7 +24,7 @@ function formatTargets(item: WorkoutGroupItem) {
 
 export function RoutineWorkoutList({ items }: RoutineWorkoutListProps) {
   const [logItem, setLogItem] = useState<
-    (WorkoutGroupItem & { workouts: Workout }) | null
+    (WorkoutGroupItem & { workouts: TaggedWorkout }) | null
   >(null);
 
   if (items.length === 0) {
@@ -58,6 +59,11 @@ export function RoutineWorkoutList({ items }: RoutineWorkoutListProps) {
                       {targets}
                     </span>
                   )}
+                  <MuscleTags
+                    tags={item.workouts.workout_tags}
+                    max={3}
+                    className="mt-0.5"
+                  />
                 </div>
                 <Button size="sm" onClick={() => setLogItem(item)}>
                   Log Sets

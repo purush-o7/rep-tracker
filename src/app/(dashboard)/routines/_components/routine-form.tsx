@@ -26,10 +26,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkoutPicker } from "./workout-picker";
 import { createWorkoutGroup, updateWorkoutGroup } from "../actions";
-import type { Workout, WorkoutGroupWithItems } from "@/lib/types";
+import type { TaggedWorkout, WorkoutGroupWithItems } from "@/lib/types";
 
 interface RoutineFormProps {
-  workouts: Workout[];
+  workouts: TaggedWorkout[];
   editGroup?: WorkoutGroupWithItems;
 }
 

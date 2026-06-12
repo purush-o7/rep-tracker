@@ -14,7 +14,7 @@ export default async function NewRoutinePage() {
 
   const { data: workouts } = await supabase
     .from("workouts")
-    .select("*")
+    .select("*, workout_tags(tags(*))")
     .order("name");
 
   return (

@@ -3,11 +3,21 @@
 import { useState } from "react";
 import { Dumbbell, Plus, Save } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { ResponsiveSheetDrawer } from "@/components/responsive-sheet-drawer";
 import { SetInputRow } from "@/app/(dashboard)/workouts/_components/set-input-row";
 import { LastSessionRef } from "@/components/last-session-ref";
+import { PlateCalculator } from "@/components/plate-calculator";
+import { EquipmentNote } from "@/components/equipment-note";
 import { logWorkout } from "@/app/(dashboard)/workouts/actions";
+import {
+  emptySet,
+  fromLoggedSet,
+  toSetInputs,
+  type SetEntry,
+} from "@/lib/set-entry";
 import type { Workout, ExerciseTargets } from "@/lib/types";
 
 interface LogSetSheetProps {
@@ -17,14 +27,10 @@ interface LogSetSheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
-interface SetData {
-  reps: number;
-  weight_kg: number;
-}
-
-function setsFromTargets(targets?: ExerciseTargets | null): SetData[] {
-  if (!targets?.target_sets) return [{ reps: 0, weight_kg: 0 }];
+function setsFromTargets(targets?: ExerciseTargets | null): SetEntry[] {
+  if (!targets?.target_sets) return [emptySet()];
   return Array.from({ length: targets.target_sets }, () => ({
+    ...emptySet(),
     reps: targets.target_reps ?? 0,
     weight_kg: targets.target_weight_kg ?? 0,
   }));
@@ -36,8 +42,12 @@ export function LogSetSheet({
   open,
   onOpenChange,
 }: LogSetSheetProps) {
-  const [sets, setSets] = useState<SetData[]>([{ reps: 0, weight_kg: 0 }]);
+  const [sets, setSets] = useState<SetEntry[]>([emptySet()]);
+  const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
+
+  const logType = workout?.log_type ?? "weight_reps";
 
   // Prefill from routine targets each time a new workout is opened
   // (state adjustment during render — see react.dev "You Might Not Need an Effect")
@@ -45,45 +55,53 @@ export function LogSetSheet({
   const openKey = open ? (workout?.id ?? null) : null;
   if (openKey !== prefillKey) {
     setPrefillKey(openKey);
-    if (openKey) setSets(setsFromTargets(targets));
+    if (openKey) {
+      setSets(logType === "weight_reps" ? setsFromTargets(targets) : [emptySet()]);
+    }
   }
 
-  const addSet = () => setSets([...sets, { reps: 0, weight_kg: 0 }]);
+  const addSet = () => setSets([...sets, sets[sets.length - 1] ?? emptySet()]);
 
   const removeSet = (index: number) =>
     setSets(sets.filter((_, i) => i !== index));
 
-  const updateSet = (index: number, field: keyof SetData, value: number) => {
-    const updated = [...sets];
-    updated[index] = { ...updated[index], [field]: value };
-    setSets(updated);
+  const updateSet = (index: number, patch: Partial<SetEntry>) => {
+    setSets(sets.map((s, i) => (i === index ? { ...s, ...patch } : s)));
   };
 
   const handleSubmit = async () => {
     if (!workout) return;
 
-    const validSets = sets.filter((s) => s.reps > 0);
+    const validSets = toSetInputs(sets, logType);
     if (validSets.length === 0) {
-      toast.error("Add at least one set with reps");
+      toast.error("Add at least one completed set");
       return;
     }
 
     setLoading(true);
     const result = await logWorkout({
       workout_id: workout.id,
-      sets: validSets.map((s, i) => ({
-        set_number: i + 1,
-        reps: s.reps,
-        weight_kg: s.weight_kg,
-      })),
+      notes: notes || undefined,
+      sets: validSets,
     });
 
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Sets logged!");
+      if ("pr" in result && result.pr) {
+        toast.success(
+          result.pr.type === "weight"
+            ? `🏆 New PR! ${result.pr.value} kg (was ${result.pr.previous} kg)`
+            : `🏆 Rep PR! ${result.pr.value} reps at top weight (was ${result.pr.previous})`,
+          { duration: 6000 }
+        );
+      } else {
+        toast.success("Sets logged!");
+      }
+      queryClient.invalidateQueries({ queryKey: ["last-session", workout.id] });
       onOpenChange(false);
-      setSets([{ reps: 0, weight_kg: 0 }]);
+      setSets([emptySet()]);
+      setNotes("");
     }
     setLoading(false);
   };
@@ -108,16 +126,13 @@ export function LogSetSheet({
       }
     >
       <div className="space-y-4">
+        <EquipmentNote workoutId={workout?.id ?? null} enabled={open} />
         <LastSessionRef
           workoutId={workout?.id ?? null}
           enabled={open}
-          onApply={(session) =>
-            setSets(
-              session.sets.map((s) => ({ reps: s.reps, weight_kg: s.weight_kg }))
-            )
-          }
+          onApply={(session) => setSets(session.sets.map(fromLoggedSet))}
         />
-        {targets?.target_sets && (
+        {logType === "weight_reps" && targets?.target_sets && (
           <p className="text-xs text-muted-foreground">
             Target: {targets.target_sets} sets
             {targets.target_reps ? ` × ${targets.target_reps} reps` : ""}
@@ -125,21 +140,26 @@ export function LogSetSheet({
           </p>
         )}
         <div className="rounded-lg border bg-muted/30 p-3">
-          <div className="grid grid-cols-[2rem_1fr_1fr_2rem] gap-2 text-xs font-medium text-muted-foreground mb-3 px-1">
-            <span className="text-center">#</span>
-            <span>Reps</span>
-            <span>Weight (kg)</span>
-            <span />
+          <div className="mb-3 flex items-center justify-between px-1 text-xs font-medium text-muted-foreground">
+            <span>
+              {logType === "weight_reps" && "Set · Reps · Weight (kg)"}
+              {logType === "duration" && "Set · Duration"}
+              {logType === "distance" && "Set · Distance"}
+            </span>
+            {logType === "weight_reps" && (
+              <PlateCalculator
+                initialWeight={sets.find((s) => s.weight_kg > 0)?.weight_kg}
+              />
+            )}
           </div>
           <div className="space-y-2">
             {sets.map((set, i) => (
               <SetInputRow
                 key={i}
                 index={i}
-                reps={set.reps}
-                weight={set.weight_kg}
-                onRepsChange={(v) => updateSet(i, "reps", v)}
-                onWeightChange={(v) => updateSet(i, "weight_kg", v)}
+                logType={logType}
+                entry={set}
+                onChange={(patch) => updateSet(i, patch)}
                 onRemove={() => removeSet(i)}
                 canRemove={sets.length > 1}
               />
@@ -155,8 +175,14 @@ export function LogSetSheet({
           <Plus className="mr-2 h-4 w-4" />
           Add Set
         </Button>
+        <Textarea
+          placeholder="Notes (optional)"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+        />
         <p className="text-xs text-center text-muted-foreground">
-          {sets.length} {sets.length === 1 ? "set" : "sets"} &middot; Sets with 0 reps will be skipped
+          {sets.length} {sets.length === 1 ? "set" : "sets"} &middot; Empty sets will be skipped
         </p>
       </div>
     </ResponsiveSheetDrawer>

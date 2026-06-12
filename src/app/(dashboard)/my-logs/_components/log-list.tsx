@@ -63,16 +63,22 @@ export function LogList({
         return val;
       };
 
-      const rows = ["Date,Exercise,Set#,Reps,Weight(kg),Notes"];
+      const rows = ["Date,Exercise,Set#,Reps,Weight(kg),Duration(s),Distance(m),Notes"];
       for (const log of result.data) {
         const date = new Date(log.performed_at).toLocaleDateString();
         const workoutRef = log.workouts as unknown as { name: string } | null;
         const name = workoutRef?.name ?? "Unknown";
         const notes = log.notes ?? "";
-        const sets = log.workout_sets as { set_number: number; reps: number; weight_kg: number }[];
+        const sets = log.workout_sets as {
+          set_number: number;
+          reps: number | null;
+          weight_kg: number;
+          duration_seconds: number | null;
+          distance_m: number | null;
+        }[];
         if (sets.length === 0) {
           rows.push(
-            [date, escapeCsv(name), "", "", "", escapeCsv(notes)].join(",")
+            [date, escapeCsv(name), "", "", "", "", "", escapeCsv(notes)].join(",")
           );
         } else {
           for (const set of sets) {
@@ -81,8 +87,10 @@ export function LogList({
                 date,
                 escapeCsv(name),
                 String(set.set_number),
-                String(set.reps),
+                set.reps != null ? String(set.reps) : "",
                 String(set.weight_kg),
+                set.duration_seconds != null ? String(set.duration_seconds) : "",
+                set.distance_m != null ? String(set.distance_m) : "",
                 escapeCsv(notes),
               ].join(",")
             );
@@ -167,13 +175,14 @@ export function LogList({
               <TableBody>
                 {logs.map((log) => {
                   const volume = log.workout_sets.reduce(
-                    (sum, s) => sum + s.reps * Number(s.weight_kg),
+                    (sum, s) => sum + (s.reps ?? 0) * Number(s.weight_kg),
                     0
                   );
                   return (
                     <TableRow key={log.id}>
                       <TableCell className="font-medium">
                         {log.workouts.name}
+                        {log.is_pr && <span title="Personal record"> 🏆</span>}
                       </TableCell>
                       <TableCell>
                         {format(new Date(log.performed_at), "PP")}
@@ -211,7 +220,7 @@ export function LogList({
           <div className="space-y-3 md:hidden">
             {logs.map((log) => {
               const volume = log.workout_sets.reduce(
-                (sum, s) => sum + s.reps * Number(s.weight_kg),
+                (sum, s) => sum + (s.reps ?? 0) * Number(s.weight_kg),
                 0
               );
               return (
@@ -224,6 +233,7 @@ export function LogList({
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">
                         {log.workouts.name}
+                        {log.is_pr && <span title="Personal record"> 🏆</span>}
                       </CardTitle>
                       {!readOnly && (
                         <Button

@@ -5,6 +5,7 @@ import { CheckCircle2, X, Dumbbell, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { MuscleTags } from "@/components/muscle-tags";
 import { removeFromPlan } from "../actions";
 import type { DailyPlanItemWithWorkout } from "@/lib/types";
 
@@ -84,6 +85,7 @@ export function TodayPlanItemCard({
         >
           {item.workouts.name}
         </Link>
+        <MuscleTags tags={item.workouts.workout_tags} max={3} className="mt-0.5" />
       </div>
 
       {/* Action buttons */}

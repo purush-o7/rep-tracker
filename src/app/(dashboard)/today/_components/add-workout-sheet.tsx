@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { addRoutineToPlan, addWorkoutToPlan } from "../actions";
 import { createClient } from "@/lib/supabase/client";
 import { useDebounce } from "@/hooks/use-debounce";
+import { MuscleTags } from "@/components/muscle-tags";
 import type { Workout, WorkoutGroup } from "@/lib/types";
 
 interface AddWorkoutSheetProps {
@@ -36,7 +37,7 @@ export function AddWorkoutSheet({
     queryFn: async () => {
       let query = supabase
         .from("workouts")
-        .select("id, name")
+        .select("id, name, workout_tags(tags(name))")
         .order("name")
         .limit(20);
 
@@ -46,7 +47,9 @@ export function AddWorkoutSheet({
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as Pick<Workout, "id" | "name">[];
+      return data as unknown as (Pick<Workout, "id" | "name"> & {
+        workout_tags: { tags: { name: string } | null }[];
+      })[];
     },
     enabled: open, // Only fetch when sheet is open
   });
@@ -160,7 +163,10 @@ export function AddWorkoutSheet({
                     key={workout.id}
                     className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-muted/50"
                   >
-                    <span className="text-sm truncate mr-2">{workout.name}</span>
+                    <div className="mr-2 min-w-0 flex-1">
+                      <span className="block truncate text-sm">{workout.name}</span>
+                      <MuscleTags tags={workout.workout_tags} max={3} />
+                    </div>
                     <Button
                       size="sm"
                       variant="ghost"
