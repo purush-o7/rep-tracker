@@ -41,6 +41,9 @@ export async function createWorkoutGroup(data: CreateWorkoutGroupInput) {
       group_id: group.id,
       workout_id: item.workout_id,
       sort_order: item.sort_order,
+      target_sets: item.target_sets ?? null,
+      target_reps: item.target_reps ?? null,
+      target_weight_kg: item.target_weight_kg ?? null,
     }));
 
     const { error: itemsError } = await supabase
@@ -88,6 +91,9 @@ export async function updateWorkoutGroup(
       group_id: groupId,
       workout_id: item.workout_id,
       sort_order: item.sort_order,
+      target_sets: item.target_sets ?? null,
+      target_reps: item.target_reps ?? null,
+      target_weight_kg: item.target_weight_kg ?? null,
     }));
 
     const { error: itemsError } = await supabase
@@ -99,6 +105,42 @@ export async function updateWorkoutGroup(
 
   revalidatePath("/routines");
   revalidatePath(`/routines/${groupId}`);
+  return { data: true };
+}
+
+export async function setWeeklyScheduleDay(
+  dayOfWeek: number,
+  groupId: string | null
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+  if (dayOfWeek < 0 || dayOfWeek > 6) return { error: "Invalid day" };
+
+  if (groupId === null) {
+    const { error } = await supabase
+      .from("weekly_schedule")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("day_of_week", dayOfWeek);
+
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await supabase
+      .from("weekly_schedule")
+      .upsert(
+        { user_id: user.id, day_of_week: dayOfWeek, group_id: groupId },
+        { onConflict: "user_id,day_of_week" }
+      );
+
+    if (error) return { error: error.message };
+  }
+
+  revalidatePath("/routines");
+  revalidatePath("/today");
   return { data: true };
 }
 

@@ -7,6 +7,7 @@ import {
 } from "@/lib/data/partners";
 import { DashboardStats } from "./_components/dashboard-stats";
 import { DashboardCharts } from "./_components/dashboard-charts";
+import { WeightGoalCard } from "./_components/weight-goal-card";
 import { PartnerSwitcher } from "../_components/partner-switcher";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ShieldAlert, Users } from "lucide-react";
@@ -32,6 +33,20 @@ function StatsCardsSkeleton() {
         </Card>
       ))}
     </div>
+  );
+}
+
+function WeightCardSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <Skeleton className="h-5 w-32" />
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Skeleton className="h-11 w-full" />
+        <Skeleton className="h-[140px] w-full" />
+      </CardContent>
+    </Card>
   );
 }
 
@@ -131,6 +146,11 @@ export default async function DashboardPage({
       <Suspense fallback={<StatsCardsSkeleton />}>
         <DashboardStats userId={viewingUserId} />
       </Suspense>
+      {viewingUserId === currentUserId && (
+        <Suspense fallback={<WeightCardSkeleton />}>
+          <WeightGoalCard userId={currentUserId} />
+        </Suspense>
+      )}
       <Suspense fallback={<ChartsSkeleton />}>
         <DashboardCharts userId={viewingUserId} />
       </Suspense>

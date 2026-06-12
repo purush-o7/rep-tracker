@@ -26,6 +26,10 @@ export type Database = {
           current_streak: number;
           longest_streak: number;
           last_workout_date: string | null;
+          goal_weight_kg: number | null;
+          goal_type: "gain" | "lose" | null;
+          goal_start_weight_kg: number | null;
+          goal_started_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -45,6 +49,10 @@ export type Database = {
           current_streak?: number;
           longest_streak?: number;
           last_workout_date?: string | null;
+          goal_weight_kg?: number | null;
+          goal_type?: "gain" | "lose" | null;
+          goal_start_weight_kg?: number | null;
+          goal_started_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -64,6 +72,10 @@ export type Database = {
           current_streak?: number;
           longest_streak?: number;
           last_workout_date?: string | null;
+          goal_weight_kg?: number | null;
+          goal_type?: "gain" | "lose" | null;
+          goal_start_weight_kg?: number | null;
+          goal_started_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -252,6 +264,9 @@ export type Database = {
           group_id: string;
           workout_id: string;
           sort_order: number;
+          target_sets: number | null;
+          target_reps: number | null;
+          target_weight_kg: number | null;
           created_at: string;
         };
         Insert: {
@@ -259,6 +274,9 @@ export type Database = {
           group_id: string;
           workout_id: string;
           sort_order?: number;
+          target_sets?: number | null;
+          target_reps?: number | null;
+          target_weight_kg?: number | null;
           created_at?: string;
         };
         Update: {
@@ -266,6 +284,9 @@ export type Database = {
           group_id?: string;
           workout_id?: string;
           sort_order?: number;
+          target_sets?: number | null;
+          target_reps?: number | null;
+          target_weight_kg?: number | null;
           created_at?: string;
         };
       };
@@ -301,6 +322,52 @@ export type Database = {
           source_group_id?: string | null;
           is_completed?: boolean;
           workout_log_id?: string | null;
+          created_at?: string;
+        };
+      };
+      body_weight_logs: {
+        Row: {
+          id: string;
+          user_id: string;
+          log_date: string;
+          weight_kg: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          log_date?: string;
+          weight_kg: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          log_date?: string;
+          weight_kg?: number;
+          created_at?: string;
+        };
+      };
+      weekly_schedule: {
+        Row: {
+          id: string;
+          user_id: string;
+          day_of_week: number;
+          group_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          day_of_week: number;
+          group_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          day_of_week?: number;
+          group_id?: string;
           created_at?: string;
         };
       };

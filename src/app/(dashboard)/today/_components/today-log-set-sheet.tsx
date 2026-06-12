@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ResponsiveSheetDrawer } from "@/components/responsive-sheet-drawer";
 import { SetInputRow } from "@/app/(dashboard)/workouts/_components/set-input-row";
+import { LastSessionRef } from "@/components/last-session-ref";
 import { logWorkoutFromPlan } from "../actions";
 import { vibrate } from "@/lib/utils";
-import type { DailyPlanItemWithWorkout } from "@/lib/types";
+import type { DailyPlanItemWithWorkout, ExerciseTargets } from "@/lib/types";
 
 interface TodayLogSetSheetProps {
   item: DailyPlanItemWithWorkout | null;
+  targets?: ExerciseTargets | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -23,14 +25,32 @@ interface SetData {
   weight_kg: number;
 }
 
+function setsFromTargets(targets?: ExerciseTargets | null): SetData[] {
+  if (!targets?.target_sets) return [{ reps: 0, weight_kg: 0 }];
+  return Array.from({ length: targets.target_sets }, () => ({
+    reps: targets.target_reps ?? 0,
+    weight_kg: targets.target_weight_kg ?? 0,
+  }));
+}
+
 export function TodayLogSetSheet({
   item,
+  targets,
   open,
   onOpenChange,
 }: TodayLogSetSheetProps) {
   const [sets, setSets] = useState<SetData[]>([{ reps: 0, weight_kg: 0 }]);
   const [notes, setNotes] = useState("");
   const queryClient = useQueryClient();
+
+  // Prefill from routine targets each time a new item is opened
+  // (state adjustment during render — see react.dev "You Might Not Need an Effect")
+  const [prefillKey, setPrefillKey] = useState<string | null>(null);
+  const openKey = open ? (item?.id ?? null) : null;
+  if (openKey !== prefillKey) {
+    setPrefillKey(openKey);
+    if (openKey) setSets(setsFromTargets(targets));
+  }
 
   const logMutation = useMutation({
     mutationFn: (data: Parameters<typeof logWorkoutFromPlan>[0]) => logWorkoutFromPlan(data),
@@ -154,6 +174,22 @@ export function TodayLogSetSheet({
       }
     >
       <div className="space-y-4">
+        <LastSessionRef
+          workoutId={item?.workout_id ?? null}
+          enabled={open}
+          onApply={(session) =>
+            setSets(
+              session.sets.map((s) => ({ reps: s.reps, weight_kg: s.weight_kg }))
+            )
+          }
+        />
+        {targets?.target_sets && (
+          <p className="text-xs text-muted-foreground">
+            Target: {targets.target_sets} sets
+            {targets.target_reps ? ` × ${targets.target_reps} reps` : ""}
+            {targets.target_weight_kg ? ` @ ${targets.target_weight_kg} kg` : ""}
+          </p>
+        )}
         <div className="rounded-lg border bg-muted/30 p-3">
           <div className="grid grid-cols-[2rem_1fr_1fr_2rem] gap-2 text-xs font-medium text-muted-foreground mb-3 px-1">
             <span className="text-center">#</span>

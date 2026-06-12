@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
-import { Plus, CalendarCheck, Dumbbell, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, CalendarCheck, CalendarClock, Dumbbell, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
@@ -25,18 +25,26 @@ import { SortableItem } from "@/components/sortable-item";
 import { TodayPlanItemCard } from "./today-plan-item-card";
 import { AddWorkoutSheet } from "./add-workout-sheet";
 import { TodayLogSetSheet } from "./today-log-set-sheet";
-import { reorderPlanItems } from "../actions";
+import { reorderPlanItems, addRoutineToPlan } from "../actions";
 import { createClient } from "@/lib/supabase/client";
-import type { DailyPlanItemWithWorkout, Workout, WorkoutGroup } from "@/lib/types";
+import type {
+  DailyPlanItemWithWorkout,
+  ExerciseTargets,
+  WorkoutGroup,
+} from "@/lib/types";
 
 interface TodayPlanListProps {
   initialPlanItems: DailyPlanItemWithWorkout[];
   routines: (WorkoutGroup & { workout_group_items: { count: number }[] })[];
+  targetsByKey?: Record<string, ExerciseTargets>;
+  scheduledRoutine?: { id: string; name: string } | null;
 }
 
 export function TodayPlanList({
   initialPlanItems,
   routines,
+  targetsByKey = {},
+  scheduledRoutine = null,
 }: TodayPlanListProps) {
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [logSheetOpen, setLogSheetOpen] = useState(false);
@@ -77,7 +85,7 @@ export function TodayPlanList({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["today-plan"] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || "Failed to reorder");
       setItems(planItems); // Revert on error
     }
@@ -87,6 +95,56 @@ export function TodayPlanList({
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
   );
+
+  const applyScheduledMutation = useMutation({
+    mutationFn: (groupId: string) => addRoutineToPlan(groupId),
+    onSuccess: (result) => {
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Routine added to today's plan!");
+        queryClient.invalidateQueries({ queryKey: ["today-plan"] });
+      }
+    },
+    onError: () => toast.error("Failed to add routine"),
+  });
+
+  // Hide the banner once the scheduled routine is already in the plan
+  const scheduledApplied =
+    !!scheduledRoutine &&
+    items.some((i) => i.source_group_id === scheduledRoutine.id);
+
+  const scheduledBanner = scheduledRoutine && !scheduledApplied && (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3"
+    >
+      <CalendarClock className="h-5 w-5 shrink-0 text-primary" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium">
+          Scheduled today: {scheduledRoutine.name}
+        </p>
+        <p className="text-xs text-muted-foreground">From your weekly schedule</p>
+      </div>
+      <Button
+        size="sm"
+        onClick={() => applyScheduledMutation.mutate(scheduledRoutine.id)}
+        disabled={applyScheduledMutation.isPending}
+      >
+        {applyScheduledMutation.isPending ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          "Apply"
+        )}
+      </Button>
+    </motion.div>
+  );
+
+  const getTargets = (item: DailyPlanItemWithWorkout) =>
+    item.source_group_id
+      ? targetsByKey[`${item.source_group_id}:${item.workout_id}`] ?? null
+      : null;
 
   const completedCount = items.filter((i) => i.is_completed).length;
   const totalCount = items.length;
@@ -112,7 +170,8 @@ export function TodayPlanList({
   if (items.length === 0 && !isLoading) {
     return (
       <>
-        <motion.div 
+        {scheduledBanner}
+        <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed p-12 text-center"
@@ -143,8 +202,10 @@ export function TodayPlanList({
 
   return (
     <>
+      {scheduledBanner}
+
       {/* Progress bar */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         className="space-y-2"
@@ -233,6 +294,7 @@ export function TodayPlanList({
       />
       <TodayLogSetSheet
         item={selectedItem}
+        targets={selectedItem ? getTargets(selectedItem) : null}
         open={logSheetOpen}
         onOpenChange={setLogSheetOpen}
       />

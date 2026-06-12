@@ -6,11 +6,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ResponsiveSheetDrawer } from "@/components/responsive-sheet-drawer";
 import { SetInputRow } from "@/app/(dashboard)/workouts/_components/set-input-row";
+import { LastSessionRef } from "@/components/last-session-ref";
 import { logWorkout } from "@/app/(dashboard)/workouts/actions";
-import type { Workout } from "@/lib/types";
+import type { Workout, ExerciseTargets } from "@/lib/types";
 
 interface LogSetSheetProps {
   workout: Workout | null;
+  targets?: ExerciseTargets | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -20,13 +22,31 @@ interface SetData {
   weight_kg: number;
 }
 
+function setsFromTargets(targets?: ExerciseTargets | null): SetData[] {
+  if (!targets?.target_sets) return [{ reps: 0, weight_kg: 0 }];
+  return Array.from({ length: targets.target_sets }, () => ({
+    reps: targets.target_reps ?? 0,
+    weight_kg: targets.target_weight_kg ?? 0,
+  }));
+}
+
 export function LogSetSheet({
   workout,
+  targets,
   open,
   onOpenChange,
 }: LogSetSheetProps) {
   const [sets, setSets] = useState<SetData[]>([{ reps: 0, weight_kg: 0 }]);
   const [loading, setLoading] = useState(false);
+
+  // Prefill from routine targets each time a new workout is opened
+  // (state adjustment during render — see react.dev "You Might Not Need an Effect")
+  const [prefillKey, setPrefillKey] = useState<string | null>(null);
+  const openKey = open ? (workout?.id ?? null) : null;
+  if (openKey !== prefillKey) {
+    setPrefillKey(openKey);
+    if (openKey) setSets(setsFromTargets(targets));
+  }
 
   const addSet = () => setSets([...sets, { reps: 0, weight_kg: 0 }]);
 
@@ -88,6 +108,22 @@ export function LogSetSheet({
       }
     >
       <div className="space-y-4">
+        <LastSessionRef
+          workoutId={workout?.id ?? null}
+          enabled={open}
+          onApply={(session) =>
+            setSets(
+              session.sets.map((s) => ({ reps: s.reps, weight_kg: s.weight_kg }))
+            )
+          }
+        />
+        {targets?.target_sets && (
+          <p className="text-xs text-muted-foreground">
+            Target: {targets.target_sets} sets
+            {targets.target_reps ? ` × ${targets.target_reps} reps` : ""}
+            {targets.target_weight_kg ? ` @ ${targets.target_weight_kg} kg` : ""}
+          </p>
+        )}
         <div className="rounded-lg border bg-muted/30 p-3">
           <div className="grid grid-cols-[2rem_1fr_1fr_2rem] gap-2 text-xs font-medium text-muted-foreground mb-3 px-1">
             <span className="text-center">#</span>

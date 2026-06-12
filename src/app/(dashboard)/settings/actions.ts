@@ -13,6 +13,8 @@ export async function updateProfile(data: {
   is_public?: boolean;
   partner_can_view_logs?: boolean;
   partner_can_edit_logs?: boolean;
+  goal_type?: "gain" | "lose" | null;
+  goal_weight_kg?: number | null;
 }) {
   const supabase = await createClient();
   const {
@@ -21,9 +23,35 @@ export async function updateProfile(data: {
 
   if (!user) return { error: "Not authenticated" };
 
+  const update: Record<string, unknown> = { ...data };
+
+  // Capture the starting point when a goal is set or changed; clear it when removed
+  if ("goal_weight_kg" in data) {
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("goal_weight_kg, goal_type, weight_kg")
+      .eq("id", user.id)
+      .single();
+
+    if (!data.goal_weight_kg || !data.goal_type) {
+      update.goal_weight_kg = null;
+      update.goal_type = null;
+      update.goal_start_weight_kg = null;
+      update.goal_started_at = null;
+    } else if (
+      existing &&
+      (Number(existing.goal_weight_kg) !== data.goal_weight_kg ||
+        existing.goal_type !== data.goal_type)
+    ) {
+      update.goal_start_weight_kg =
+        data.weight_kg ?? (existing.weight_kg ? Number(existing.weight_kg) : null);
+      update.goal_started_at = new Date().toISOString().split("T")[0];
+    }
+  }
+
   const { error } = await supabase
     .from("profiles")
-    .update(data)
+    .update(update)
     .eq("id", user.id);
 
   if (error) {
@@ -37,6 +65,7 @@ export async function updateProfile(data: {
   }
 
   revalidatePath("/settings");
+  revalidatePath("/dashboard");
   return { data: true };
 }
 

@@ -3,6 +3,9 @@ import { z } from "zod";
 export const workoutGroupItemSchema = z.object({
   workout_id: z.string().uuid(),
   sort_order: z.number().int().min(0),
+  target_sets: z.number().int().min(1).max(20).optional().nullable(),
+  target_reps: z.number().int().min(1).max(99).optional().nullable(),
+  target_weight_kg: z.number().min(0).max(999).optional().nullable(),
 });
 
 export const createWorkoutGroupSchema = z.object({

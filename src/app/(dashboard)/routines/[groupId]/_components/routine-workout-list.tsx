@@ -11,8 +11,20 @@ interface RoutineWorkoutListProps {
   items: (WorkoutGroupItem & { workouts: Workout })[];
 }
 
+function formatTargets(item: WorkoutGroupItem) {
+  if (!item.target_sets && !item.target_reps && !item.target_weight_kg)
+    return null;
+  const parts: string[] = [];
+  if (item.target_sets) parts.push(`${item.target_sets} sets`);
+  if (item.target_reps) parts.push(`× ${item.target_reps} reps`);
+  if (item.target_weight_kg) parts.push(`@ ${item.target_weight_kg} kg`);
+  return parts.join(" ");
+}
+
 export function RoutineWorkoutList({ items }: RoutineWorkoutListProps) {
-  const [logWorkout, setLogWorkout] = useState<Workout | null>(null);
+  const [logItem, setLogItem] = useState<
+    (WorkoutGroupItem & { workouts: Workout }) | null
+  >(null);
 
   if (items.length === 0) {
     return (
@@ -28,32 +40,40 @@ export function RoutineWorkoutList({ items }: RoutineWorkoutListProps) {
   return (
     <>
       <div className="space-y-2">
-        {sorted.map((item, i) => (
-          <Card key={item.id}>
-            <CardContent className="flex items-center gap-3 p-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                {i + 1}
-              </span>
-              <Dumbbell className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="flex-1 truncate font-medium">
-                {item.workouts.name}
-              </span>
-              <Button
-                size="sm"
-                onClick={() => setLogWorkout(item.workouts)}
-              >
-                Log Sets
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+        {sorted.map((item, i) => {
+          const targets = formatTargets(item);
+          return (
+            <Card key={item.id}>
+              <CardContent className="flex items-center gap-3 p-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                  {i + 1}
+                </span>
+                <Dumbbell className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="flex-1 min-w-0">
+                  <span className="block truncate font-medium">
+                    {item.workouts.name}
+                  </span>
+                  {targets && (
+                    <span className="block text-xs text-muted-foreground">
+                      {targets}
+                    </span>
+                  )}
+                </div>
+                <Button size="sm" onClick={() => setLogItem(item)}>
+                  Log Sets
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       <LogSetSheet
-        workout={logWorkout}
-        open={!!logWorkout}
+        workout={logItem?.workouts ?? null}
+        targets={logItem}
+        open={!!logItem}
         onOpenChange={(open) => {
-          if (!open) setLogWorkout(null);
+          if (!open) setLogItem(null);
         }}
       />
     </>

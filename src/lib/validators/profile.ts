@@ -19,6 +19,8 @@ export const profileSchema = z.object({
   is_public: z.boolean().optional(),
   partner_can_view_logs: z.boolean().optional(),
   partner_can_edit_logs: z.boolean().optional(),
+  goal_type: z.enum(["gain", "lose"]).optional().nullable(),
+  goal_weight_kg: z.number().positive().max(499).optional().nullable(),
 });
 
 export type ProfileInput = z.infer<typeof profileSchema>;

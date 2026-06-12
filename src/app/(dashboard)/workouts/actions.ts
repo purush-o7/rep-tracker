@@ -98,6 +98,34 @@ export async function logWorkout(data: {
   return { data: log };
 }
 
+export async function getLastSession(workoutId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  const { data: log, error } = await supabase
+    .from("workout_logs")
+    .select("performed_at, workout_sets(set_number, reps, weight_kg)")
+    .eq("user_id", user.id)
+    .eq("workout_id", workoutId)
+    .order("performed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) return { error: error.message };
+  if (!log || log.workout_sets.length === 0) return { data: null };
+
+  return {
+    data: {
+      performed_at: log.performed_at,
+      sets: [...log.workout_sets].sort((a, b) => a.set_number - b.set_number),
+    },
+  };
+}
+
 export async function updateLog(data: {
   log_id: string;
   notes?: string;

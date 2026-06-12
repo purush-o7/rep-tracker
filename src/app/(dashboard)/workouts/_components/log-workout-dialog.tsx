@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { logWorkout } from "../actions";
 import { SetInputRow } from "./set-input-row";
+import { LastSessionRef } from "@/components/last-session-ref";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -136,6 +137,22 @@ export function LogWorkoutDialog({
                 </p>
               )}
             </div>
+          )}
+
+          {forUserId === "myself" && (
+            <LastSessionRef
+              workoutId={workout?.id ?? null}
+              enabled={open}
+              onApply={(session) =>
+                setSets(
+                  session.sets.map((s) => ({
+                    id: nextSetId++,
+                    reps: s.reps,
+                    weight_kg: s.weight_kg,
+                  }))
+                )
+              }
+            />
           )}
 
           <div className="space-y-2">

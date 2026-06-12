@@ -30,3 +30,19 @@ export type WorkoutGroupWithItems = WorkoutGroup & {
 
 export type DailyPlanItem = Database["public"]["Tables"]["daily_plan_items"]["Row"];
 export type DailyPlanItemWithWorkout = DailyPlanItem & { workouts: Workout };
+
+export type BodyWeightLog = Database["public"]["Tables"]["body_weight_logs"]["Row"];
+export type WeeklyScheduleEntry = Database["public"]["Tables"]["weekly_schedule"]["Row"];
+
+/** Prescribed targets for an exercise inside a routine */
+export type ExerciseTargets = {
+  target_sets: number | null;
+  target_reps: number | null;
+  target_weight_kg: number | null;
+};
+
+/** Previous session summary shown while logging sets */
+export type LastSession = {
+  performed_at: string;
+  sets: { set_number: number; reps: number; weight_kg: number }[];
+};

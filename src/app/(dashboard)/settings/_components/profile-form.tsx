@@ -51,6 +51,10 @@ export function ProfileForm({ profile }: ProfileFormProps) {
       is_public: profile.is_public ?? false,
       partner_can_view_logs: profile.partner_can_view_logs ?? true,
       partner_can_edit_logs: profile.partner_can_edit_logs ?? true,
+      goal_type: profile.goal_type,
+      goal_weight_kg: profile.goal_weight_kg
+        ? Number(profile.goal_weight_kg)
+        : null,
     },
   });
 
@@ -256,6 +260,68 @@ export function ProfileForm({ profile }: ProfileFormProps) {
               </FormItem>
             )}
           />
+        </div>
+
+        <Separator />
+
+        <div className="space-y-4">
+          <h3 className="text-sm font-medium">Transformation Goal</h3>
+          <p className="text-sm text-muted-foreground">
+            Set a target weight to track progress on your dashboard.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="goal_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Goal</FormLabel>
+                  <Select
+                    onValueChange={(v) =>
+                      field.onChange(v === "none" ? null : v)
+                    }
+                    value={field.value ?? "none"}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="No goal" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">No goal</SelectItem>
+                      <SelectItem value="gain">Gain weight</SelectItem>
+                      <SelectItem value="lose">Lose weight</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="goal_weight_kg"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Target weight (kg)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.1"
+                      {...field}
+                      value={field.value ?? ""}
+                      onChange={(e) =>
+                        field.onChange(
+                          e.target.value ? Number(e.target.value) : null
+                        )
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
 
         <Separator />
