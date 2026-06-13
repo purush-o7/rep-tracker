@@ -521,3 +521,18 @@ FROM (VALUES
   ('Man Maker', 3, '8')
 ) AS v(name, sets, reps)
 WHERE lower(w.name) = lower(v.name);
+
+-- 7. Single-Arm Lat Pulldown (from Manoj tracker-2 "Single-Arm Lat Pulldown / Row")
+INSERT INTO public.workouts (name, description, youtube_url, default_sets, default_reps)
+SELECT v.name, v.description, v.url, v.sets, v.reps
+FROM (VALUES
+  ('Single-Arm Lat Pulldown', 'Kneel or sit at a high cable with a single handle and pull down toward your shoulder one arm at a time, letting the lat stretch fully overhead. Unilateral work that fixes left–right imbalances and improves the mind-muscle connection.', 'https://www.youtube.com/watch?v=M9xUoJYtXtc', 3, '12 each side')
+) AS v(name, description, url, sets, reps)
+WHERE NOT EXISTS (SELECT 1 FROM public.workouts w WHERE lower(w.name) = lower(v.name));
+
+INSERT INTO public.workout_tags (workout_id, tag_id)
+SELECT w.id, t.id
+FROM (VALUES ('Single-Arm Lat Pulldown', 'back'), ('Single-Arm Lat Pulldown', 'biceps')) AS m(workout_name, tag_name)
+JOIN public.workouts w ON lower(w.name) = lower(m.workout_name)
+JOIN public.tags t ON t.name = m.tag_name
+ON CONFLICT (workout_id, tag_id) DO NOTHING;
