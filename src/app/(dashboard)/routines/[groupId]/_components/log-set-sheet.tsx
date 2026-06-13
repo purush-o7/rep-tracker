@@ -61,7 +61,9 @@ export function LogSetSheet({
     }
   }
 
-  const addSet = () => setSets((prev) => [...prev, emptySet()]);
+  // New set carries over the previous set's values (distinct copy)
+  const addSet = () =>
+    setSets((prev) => [...prev, { ...(prev[prev.length - 1] ?? emptySet()) }]);
 
   const removeSet = (index: number) =>
     setSets((prev) => prev.filter((_, i) => i !== index));
