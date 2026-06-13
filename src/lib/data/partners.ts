@@ -19,12 +19,13 @@ export async function getPartnersWithPermissions(
   let partners: {
     id: string;
     full_name: string | null;
+    handle: string | null;
     partner_can_view_logs: boolean;
   }[] = [];
   if (partnerIds.length > 0) {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, full_name, partner_can_view_logs")
+      .select("id, full_name, handle, partner_can_view_logs")
       .in("id", partnerIds);
     partners = profiles ?? [];
   }
@@ -32,11 +33,20 @@ export async function getPartnersWithPermissions(
   return { partners, partnerIds };
 }
 
+/** Display label for a partner: @handle (what they were invited by), else name. */
+export function partnerLabel(p: {
+  full_name: string | null;
+  handle: string | null;
+}): string {
+  return p.handle ? `@${p.handle}` : p.full_name?.trim() || "Partner";
+}
+
 export function resolvePartnerView(
   params: { partner?: string },
   partners: {
     id: string;
     full_name: string | null;
+    handle: string | null;
     partner_can_view_logs: boolean;
   }[],
   partnerIds: string[],
@@ -49,7 +59,7 @@ export function resolvePartnerView(
   if (params.partner && partnerIds.includes(params.partner)) {
     viewingUserId = params.partner;
     const partnerProfile = partners.find((p) => p.id === params.partner);
-    partnerName = partnerProfile?.full_name ?? "Partner";
+    partnerName = partnerProfile ? partnerLabel(partnerProfile) : "Partner";
     if (partnerProfile && !partnerProfile.partner_can_view_logs) {
       partnerViewRestricted = true;
     }

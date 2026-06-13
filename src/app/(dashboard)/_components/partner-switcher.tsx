@@ -10,9 +10,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { partnerLabel } from "@/lib/data/partners";
 
 interface PartnerSwitcherProps {
-  partners: { id: string; full_name: string | null }[];
+  partners: { id: string; full_name: string | null; handle?: string | null }[];
   activePartnerId?: string;
 }
 
@@ -59,7 +60,7 @@ export function PartnerSwitcher({
           <SelectItem value="myself">My Data</SelectItem>
           {partners.map((p) => (
             <SelectItem key={p.id} value={p.id}>
-              {p.full_name ?? "Partner"}
+              {partnerLabel({ full_name: p.full_name, handle: p.handle ?? null })}
             </SelectItem>
           ))}
         </SelectContent>
