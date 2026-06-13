@@ -25,11 +25,20 @@ import { logBodyWeight } from "../actions";
 interface WeightGoalCardClientProps {
   profile: {
     weight_kg: number | null;
+    height_cm: number | null;
     goal_weight_kg: number | null;
     goal_type: "gain" | "lose" | null;
     goal_start_weight_kg: number | null;
   };
   logs: { log_date: string; weight_kg: number }[];
+}
+
+function bmiCategory(bmi: number): { label: string; className: string } {
+  if (bmi < 18.5)
+    return { label: "Underweight", className: "text-blue-500" };
+  if (bmi < 25) return { label: "Healthy", className: "text-green-500" };
+  if (bmi < 30) return { label: "Overweight", className: "text-amber-500" };
+  return { label: "Obese", className: "text-red-500" };
 }
 
 const chartConfig = {
@@ -49,6 +58,13 @@ export function WeightGoalCardClient({
 
   const current =
     logs.length > 0 ? logs[logs.length - 1].weight_kg : profile.weight_kg;
+
+  // BMI from current weight + profile height
+  const bmi =
+    current != null && profile.height_cm
+      ? current / Math.pow(profile.height_cm / 100, 2)
+      : null;
+  const bmiInfo = bmi != null ? bmiCategory(bmi) : null;
 
   const hasGoal = !!profile.goal_weight_kg && !!profile.goal_type;
   const start = profile.goal_start_weight_kg ?? profile.weight_kg ?? current;
@@ -137,6 +153,27 @@ export function WeightGoalCardClient({
             )}
           </Button>
         </div>
+
+        {/* BMI */}
+        {bmi != null && bmiInfo ? (
+          <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
+            <span className="text-sm text-muted-foreground">BMI</span>
+            <span className="flex items-baseline gap-2">
+              <span className="text-base font-semibold">{bmi.toFixed(1)}</span>
+              <span className={`text-xs font-medium ${bmiInfo.className}`}>
+                {bmiInfo.label}
+              </span>
+            </span>
+          </div>
+        ) : current != null && !profile.height_cm ? (
+          <p className="text-xs text-muted-foreground">
+            Add your height in{" "}
+            <Link href="/settings" className="text-primary underline">
+              settings
+            </Link>{" "}
+            to see your BMI.
+          </p>
+        ) : null}
 
         {/* Goal progress */}
         {hasGoal && current != null && (

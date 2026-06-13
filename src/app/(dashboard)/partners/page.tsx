@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,14 @@ export default async function PartnersPage() {
   } = await supabase.auth.getUser();
 
   const userId = user!.id;
+
+  // The current user's own handle (what they share so others can invite them)
+  const { data: ownProfile } = await supabase
+    .from("profiles")
+    .select("handle")
+    .eq("id", userId)
+    .single();
+  const ownHandle = ownProfile?.handle ?? null;
 
   // Fetch all partnerships involving this user
   const { data: partnerships } = await supabase
@@ -110,7 +119,25 @@ export default async function PartnersPage() {
         <CardHeader>
           <CardTitle>Add a Partner</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {ownHandle ? (
+            <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm">
+              Your handle:{" "}
+              <span className="font-semibold text-primary">@{ownHandle}</span>
+              <span className="text-muted-foreground">
+                {" "}
+                — share this so others can invite you.
+              </span>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">
+              Set a handle in{" "}
+              <Link href="/settings" className="text-primary underline">
+                settings
+              </Link>{" "}
+              so partners can find and invite you.
+            </div>
+          )}
           <InvitePartnerForm />
         </CardContent>
       </Card>

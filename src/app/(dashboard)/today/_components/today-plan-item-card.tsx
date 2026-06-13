@@ -13,40 +13,42 @@ interface TodayPlanItemCardProps {
   item: DailyPlanItemWithWorkout;
   index: number;
   onLogSets: (item: DailyPlanItemWithWorkout) => void;
+  viewingUserId: string;
+  canLog?: boolean;
+  canRemove?: boolean;
 }
 
 export function TodayPlanItemCard({
   item,
   index,
   onLogSets,
+  viewingUserId,
+  canLog = true,
+  canRemove = true,
 }: TodayPlanItemCardProps) {
   const queryClient = useQueryClient();
+  const planKey = ["today-plan", viewingUserId];
 
   const removeMutation = useMutation({
     mutationFn: (id: string) => removeFromPlan(id),
     onMutate: async (deletedId) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["today-plan"] });
-
-      // Snapshot the previous value
-      const previousPlan = queryClient.getQueryData<DailyPlanItemWithWorkout[]>(["today-plan"]);
-
-      // Optimistically update to the new value
-      queryClient.setQueryData<DailyPlanItemWithWorkout[]>(["today-plan"], (old) => {
+      await queryClient.cancelQueries({ queryKey: planKey });
+      const previousPlan =
+        queryClient.getQueryData<DailyPlanItemWithWorkout[]>(planKey);
+      queryClient.setQueryData<DailyPlanItemWithWorkout[]>(planKey, (old) => {
         if (!old) return [];
         return old.filter((item) => item.id !== deletedId);
       });
-
       return { previousPlan };
     },
     onError: (err, newLog, context) => {
       if (context?.previousPlan) {
-        queryClient.setQueryData(["today-plan"], context.previousPlan);
+        queryClient.setQueryData(planKey, context.previousPlan);
       }
       toast.error("Failed to remove item.");
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["today-plan"] });
+      queryClient.invalidateQueries({ queryKey: planKey });
     },
   });
 
@@ -96,24 +98,33 @@ export function TodayPlanItemCard({
             Done
           </span>
         ) : (
-          <Button size="sm" variant="outline" onClick={() => onLogSets(item)} disabled={isPending}>
-            <Dumbbell className="mr-1.5 h-3.5 w-3.5" />
-            Log Sets
+          canLog && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onLogSets(item)}
+              disabled={isPending}
+            >
+              <Dumbbell className="mr-1.5 h-3.5 w-3.5" />
+              Log Sets
+            </Button>
+          )
+        )}
+        {canRemove && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+            onClick={handleRemove}
+            disabled={isPending}
+          >
+            {isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <X className="h-4 w-4" />
+            )}
           </Button>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-          onClick={handleRemove}
-          disabled={isPending}
-        >
-          {isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <X className="h-4 w-4" />
-          )}
-        </Button>
       </div>
     </div>
   );

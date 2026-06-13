@@ -7,7 +7,7 @@ export async function WeightGoalCard({ userId }: { userId: string }) {
   const [profileResult, logsResult] = await Promise.all([
     supabase
       .from("profiles")
-      .select("weight_kg, goal_weight_kg, goal_type, goal_start_weight_kg, goal_started_at")
+      .select("weight_kg, height_cm, goal_weight_kg, goal_type, goal_start_weight_kg, goal_started_at")
       .eq("id", userId)
       .single(),
     supabase
@@ -25,6 +25,7 @@ export async function WeightGoalCard({ userId }: { userId: string }) {
     <WeightGoalCardClient
       profile={{
         weight_kg: profile.weight_kg ? Number(profile.weight_kg) : null,
+        height_cm: profile.height_cm ? Number(profile.height_cm) : null,
         goal_weight_kg: profile.goal_weight_kg
           ? Number(profile.goal_weight_kg)
           : null,

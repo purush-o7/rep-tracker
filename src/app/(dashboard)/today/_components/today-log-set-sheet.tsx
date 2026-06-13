@@ -26,6 +26,8 @@ interface TodayLogSetSheetProps {
   targets?: ExerciseTargets | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  viewingUserId: string;
+  forUserId?: string;
 }
 
 function setsFromTargets(targets?: ExerciseTargets | null): SetEntry[] {
@@ -42,11 +44,14 @@ export function TodayLogSetSheet({
   targets,
   open,
   onOpenChange,
+  viewingUserId,
+  forUserId,
 }: TodayLogSetSheetProps) {
   const [sets, setSets] = useState<SetEntry[]>([emptySet()]);
   const [notes, setNotes] = useState("");
   const queryClient = useQueryClient();
 
+  const planKey = ["today-plan", viewingUserId];
   const logType = item?.workouts.log_type ?? "weight_reps";
 
   // Prefill from routine targets each time a new item is opened
@@ -63,9 +68,9 @@ export function TodayLogSetSheet({
   const logMutation = useMutation({
     mutationFn: (data: Parameters<typeof logWorkoutFromPlan>[0]) => logWorkoutFromPlan(data),
     onMutate: async (newLog) => {
-      await queryClient.cancelQueries({ queryKey: ["today-plan"] });
-      const previousPlan = queryClient.getQueryData<DailyPlanItemWithWorkout[]>(["today-plan"]);
-      queryClient.setQueryData<DailyPlanItemWithWorkout[]>(["today-plan"], (old) => {
+      await queryClient.cancelQueries({ queryKey: planKey });
+      const previousPlan = queryClient.getQueryData<DailyPlanItemWithWorkout[]>(planKey);
+      queryClient.setQueryData<DailyPlanItemWithWorkout[]>(planKey, (old) => {
         if (!old) return [];
         return old.map((item) => {
           if (item.id === newLog.plan_item_id) {
@@ -82,7 +87,7 @@ export function TodayLogSetSheet({
     },
     onError: (err, newLog, context) => {
       if (context?.previousPlan) {
-        queryClient.setQueryData(["today-plan"], context.previousPlan);
+        queryClient.setQueryData(planKey, context.previousPlan);
       }
       toast.error("Failed to save sets. Please try again.");
     },
@@ -108,7 +113,7 @@ export function TodayLogSetSheet({
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["today-plan"] });
+      queryClient.invalidateQueries({ queryKey: planKey });
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
       queryClient.invalidateQueries({ queryKey: ["streaks"] });
       queryClient.invalidateQueries({ queryKey: ["last-session", item?.workout_id] });
@@ -138,6 +143,7 @@ export function TodayLogSetSheet({
       workout_id: item.workout_id,
       notes: notes || undefined,
       sets: validSets,
+      for_user_id: forUserId,
     });
   };
 

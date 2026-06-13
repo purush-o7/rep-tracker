@@ -38,6 +38,9 @@ interface TodayPlanListProps {
   routines: (WorkoutGroup & { workout_group_items: { count: number }[] })[];
   targetsByKey?: Record<string, ExerciseTargets>;
   scheduledRoutine?: { id: string; name: string } | null;
+  viewingUserId: string;
+  isPartnerView?: boolean;
+  canEdit?: boolean;
 }
 
 export function TodayPlanList({
@@ -45,6 +48,9 @@ export function TodayPlanList({
   routines,
   targetsByKey = {},
   scheduledRoutine = null,
+  viewingUserId,
+  isPartnerView = false,
+  canEdit = true,
 }: TodayPlanListProps) {
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [logSheetOpen, setLogSheetOpen] = useState(false);
@@ -52,17 +58,16 @@ export function TodayPlanList({
   const queryClient = useQueryClient();
   const supabase = createClient();
 
+  const planKey = ["today-plan", viewingUserId];
+
   const { data: planItems = initialPlanItems, isLoading } = useQuery({
-    queryKey: ["today-plan"],
+    queryKey: planKey,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-      
       const today = new Date().toISOString().split("T")[0];
       const { data, error } = await supabase
         .from("daily_plan_items")
         .select("*, workouts(*, workout_tags(tags(*)))")
-        .eq("user_id", user.id)
+        .eq("user_id", viewingUserId)
         .eq("plan_date", today)
         .order("sort_order");
 
@@ -84,12 +89,12 @@ export function TodayPlanList({
   const reorderMutation = useMutation({
     mutationFn: (orderedIds: string[]) => reorderPlanItems(orderedIds),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["today-plan"] });
+      queryClient.invalidateQueries({ queryKey: planKey });
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to reorder");
       setItems(planItems); // Revert on error
-    }
+    },
   });
 
   const sensors = useSensors(
@@ -104,7 +109,7 @@ export function TodayPlanList({
         toast.error(result.error);
       } else {
         toast.success("Routine added to today's plan!");
-        queryClient.invalidateQueries({ queryKey: ["today-plan"] });
+        queryClient.invalidateQueries({ queryKey: planKey });
       }
     },
     onError: () => toast.error("Failed to add routine"),
@@ -115,7 +120,7 @@ export function TodayPlanList({
     !!scheduledRoutine &&
     items.some((i) => i.source_group_id === scheduledRoutine.id);
 
-  const scheduledBanner = scheduledRoutine && !scheduledApplied && (
+  const scheduledBanner = !isPartnerView && scheduledRoutine && !scheduledApplied && (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -151,24 +156,39 @@ export function TodayPlanList({
   const totalCount = items.length;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
+  // In partner view, logging is only allowed when they granted edit permission
+  const canLog = !isPartnerView || canEdit;
+  const canModifyPlan = !isPartnerView; // add / reorder / remove
+
   const handleLogSets = (item: DailyPlanItemWithWorkout) => {
     setSelectedItem(item);
     setLogSheetOpen(true);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    if (!canModifyPlan) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
     const oldIndex = items.findIndex((i) => i.id === active.id);
     const newIndex = items.findIndex((i) => i.id === over.id);
     const reordered = arrayMove(items, oldIndex, newIndex);
-    
+
     setItems(reordered);
     reorderMutation.mutate(reordered.map((i) => i.id));
   };
 
   if (items.length === 0 && !isLoading) {
+    if (isPartnerView) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed p-12 text-center">
+          <Dumbbell className="h-8 w-8 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            No workouts planned for today.
+          </p>
+        </div>
+      );
+    }
     return (
       <>
         {scheduledBanner}
@@ -220,7 +240,7 @@ export function TodayPlanList({
           </div>
           <AnimatePresence mode="wait">
             {completedCount === totalCount && totalCount > 0 && (
-              <motion.span 
+              <motion.span
                 key="all-done"
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -244,6 +264,7 @@ export function TodayPlanList({
         <SortableContext
           items={items.map((i) => i.id)}
           strategy={verticalListSortingStrategy}
+          disabled={!canModifyPlan}
         >
           <div className="space-y-2 mt-4">
             <AnimatePresence mode="popLayout" initial={false}>
@@ -256,11 +277,14 @@ export function TodayPlanList({
                   exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
                   transition={{ type: "spring", stiffness: 500, damping: 30, mass: 1 }}
                 >
-                  <SortableItem id={item.id}>
+                  <SortableItem id={item.id} disabled={!canModifyPlan}>
                     <TodayPlanItemCard
                       item={item}
                       index={index}
                       onLogSets={handleLogSets}
+                      viewingUserId={viewingUserId}
+                      canLog={canLog}
+                      canRemove={canModifyPlan}
                     />
                   </SortableItem>
                 </motion.div>
@@ -275,29 +299,35 @@ export function TodayPlanList({
         </SortableContext>
       </DndContext>
 
-      {/* Add more button */}
-      <motion.div layout className="mt-4">
-        <Button
-          variant="outline"
-          className="w-full border-dashed"
-          onClick={() => setAddSheetOpen(true)}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Workout
-        </Button>
-      </motion.div>
+      {/* Add more button (own plan only) */}
+      {canModifyPlan && (
+        <motion.div layout className="mt-4">
+          <Button
+            variant="outline"
+            className="w-full border-dashed"
+            onClick={() => setAddSheetOpen(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Workout
+          </Button>
+        </motion.div>
+      )}
 
       {/* Sheets */}
-      <AddWorkoutSheet
-        open={addSheetOpen}
-        onOpenChange={setAddSheetOpen}
-        routines={routines}
-      />
+      {canModifyPlan && (
+        <AddWorkoutSheet
+          open={addSheetOpen}
+          onOpenChange={setAddSheetOpen}
+          routines={routines}
+        />
+      )}
       <TodayLogSetSheet
         item={selectedItem}
         targets={selectedItem ? getTargets(selectedItem) : null}
         open={logSheetOpen}
         onOpenChange={setLogSheetOpen}
+        viewingUserId={viewingUserId}
+        forUserId={isPartnerView ? viewingUserId : undefined}
       />
     </>
   );

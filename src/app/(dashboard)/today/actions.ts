@@ -147,6 +147,7 @@ export async function logWorkoutFromPlan(data: {
   workout_id: string;
   sets: WorkoutSetInput[];
   notes?: string;
+  for_user_id?: string;
 }) {
   const supabase = await createClient();
   const {
@@ -155,13 +156,39 @@ export async function logWorkoutFromPlan(data: {
 
   if (!user) return { error: "Not authenticated" };
 
-  // Verify plan item ownership
+  const targetUserId = data.for_user_id ?? user.id;
+
+  // Logging for a partner: verify accepted partnership + edit permission
+  if (targetUserId !== user.id) {
+    const { data: partnership } = await supabase
+      .from("workout_partners")
+      .select("id")
+      .eq("status", "accepted")
+      .or(
+        `and(requester_id.eq.${user.id},addressee_id.eq.${targetUserId}),and(addressee_id.eq.${user.id},requester_id.eq.${targetUserId})`
+      )
+      .maybeSingle();
+
+    if (!partnership) return { error: "Not a valid partner" };
+
+    const { data: targetProfile } = await supabase
+      .from("profiles")
+      .select("partner_can_edit_logs")
+      .eq("id", targetUserId)
+      .single();
+
+    if (!targetProfile?.partner_can_edit_logs) {
+      return { error: "This partner does not allow others to log for them" };
+    }
+  }
+
+  // Verify the plan item belongs to the target user
   const { data: planItem } = await supabase
     .from("daily_plan_items")
     .select("id")
     .eq("id", data.plan_item_id)
-    .eq("user_id", user.id)
-    .single();
+    .eq("user_id", targetUserId)
+    .maybeSingle();
 
   if (!planItem) return { error: "Plan item not found" };
 
@@ -169,7 +196,7 @@ export async function logWorkoutFromPlan(data: {
   const { data: log, error: logError } = await supabase
     .from("workout_logs")
     .insert({
-      user_id: user.id,
+      user_id: targetUserId,
       workout_id: data.workout_id,
       notes: data.notes || null,
       performed_at: new Date().toISOString(),
@@ -208,7 +235,7 @@ export async function logWorkoutFromPlan(data: {
 
   const pr = await checkAndFlagPr(
     supabase,
-    user.id,
+    targetUserId,
     data.workout_id,
     log.id,
     data.sets
