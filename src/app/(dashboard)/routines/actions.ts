@@ -108,38 +108,48 @@ export async function updateWorkoutGroup(
   return { data: true };
 }
 
-export async function setWeeklyScheduleDay(
-  dayOfWeek: number,
-  groupId: string | null
-) {
+/**
+ * Set which weekdays a routine is scheduled on. Each weekday holds at most one
+ * routine (unique per user+day), so selecting a day for this routine overwrites
+ * whatever was there; deselecting removes only this routine's days.
+ */
+export async function setRoutineScheduleDays(groupId: string, days: number[]) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) return { error: "Not authenticated" };
-  if (dayOfWeek < 0 || dayOfWeek > 6) return { error: "Invalid day" };
 
-  if (groupId === null) {
-    const { error } = await supabase
-      .from("weekly_schedule")
-      .delete()
-      .eq("user_id", user.id)
-      .eq("day_of_week", dayOfWeek);
+  const validDays = [...new Set(days)].filter((d) => d >= 0 && d <= 6);
 
-    if (error) return { error: error.message };
-  } else {
-    const { error } = await supabase
-      .from("weekly_schedule")
-      .upsert(
-        { user_id: user.id, day_of_week: dayOfWeek, group_id: groupId },
-        { onConflict: "user_id,day_of_week" }
-      );
+  // Remove this routine from any day no longer selected
+  let removeQuery = supabase
+    .from("weekly_schedule")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("group_id", groupId);
+  if (validDays.length > 0) {
+    removeQuery = removeQuery.not("day_of_week", "in", `(${validDays.join(",")})`);
+  }
+  const { error: delError } = await removeQuery;
+  if (delError) return { error: delError.message };
 
-    if (error) return { error: error.message };
+  // Assign this routine to each selected day (overwriting other routines there)
+  if (validDays.length > 0) {
+    const { error: upError } = await supabase.from("weekly_schedule").upsert(
+      validDays.map((d) => ({
+        user_id: user.id,
+        day_of_week: d,
+        group_id: groupId,
+      })),
+      { onConflict: "user_id,day_of_week" }
+    );
+    if (upError) return { error: upError.message };
   }
 
   revalidatePath("/routines");
+  revalidatePath(`/routines/${groupId}`);
   revalidatePath("/today");
   return { data: true };
 }

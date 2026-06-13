@@ -18,16 +18,19 @@ export default async function EditRoutinePage({
   const { groupId } = await params;
   const supabase = await createClient();
 
-  const [groupRes, workoutsRes] = await Promise.all([
+  const [groupRes, workoutsRes, scheduleRes] = await Promise.all([
     supabase
       .from("workout_groups")
       .select("*, workout_group_items(*, workouts(*))")
       .eq("id", groupId)
       .single(),
     supabase.from("workouts").select("*, workout_tags(tags(*))").order("name"),
+    supabase.from("weekly_schedule").select("day_of_week").eq("group_id", groupId),
   ]);
 
   if (!groupRes.data) notFound();
+
+  const scheduledDays = (scheduleRes.data ?? []).map((s) => s.day_of_week);
 
   return (
     <div className="space-y-4">
@@ -42,6 +45,7 @@ export default async function EditRoutinePage({
       <RoutineForm
         workouts={workoutsRes.data ?? []}
         editGroup={groupRes.data}
+        scheduledDays={scheduledDays}
       />
     </div>
   );

@@ -25,12 +25,29 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RoutineWorkoutSearch } from "./routine-workout-search";
-import { createWorkoutGroup, updateWorkoutGroup } from "../actions";
+import {
+  createWorkoutGroup,
+  updateWorkoutGroup,
+  setRoutineScheduleDays,
+} from "../actions";
+import { cn } from "@/lib/utils";
 import type { TaggedWorkout, WorkoutGroupWithItems } from "@/lib/types";
+
+// Monday-first display; values are JS getDay() numbers
+const WEEK_DAYS = [
+  { value: 1, label: "Mon" },
+  { value: 2, label: "Tue" },
+  { value: 3, label: "Wed" },
+  { value: 4, label: "Thu" },
+  { value: 5, label: "Fri" },
+  { value: 6, label: "Sat" },
+  { value: 0, label: "Sun" },
+];
 
 interface RoutineFormProps {
   workouts: TaggedWorkout[];
   editGroup?: WorkoutGroupWithItems;
+  scheduledDays?: number[];
 }
 
 interface RoutineItem {
@@ -40,9 +57,19 @@ interface RoutineItem {
   target_weight_kg: number | null;
 }
 
-export function RoutineForm({ workouts, editGroup }: RoutineFormProps) {
+export function RoutineForm({
+  workouts,
+  editGroup,
+  scheduledDays = [],
+}: RoutineFormProps) {
   const router = useRouter();
   const isEditing = !!editGroup;
+  const [days, setDays] = useState<number[]>(scheduledDays);
+
+  const toggleDay = (value: number) =>
+    setDays((prev) =>
+      prev.includes(value) ? prev.filter((d) => d !== value) : [...prev, value]
+    );
 
   const [name, setName] = useState(editGroup?.name ?? "");
   const [description, setDescription] = useState(
@@ -145,6 +172,8 @@ export function RoutineForm({ workouts, editGroup }: RoutineFormProps) {
     }
 
     if (isEditing) {
+      // Persist the weekly schedule day assignments for this routine
+      await setRoutineScheduleDays(editGroup.id, days);
       toast.success("Routine updated!");
       router.push("/routines");
     } else {
@@ -316,6 +345,40 @@ export function RoutineForm({ workouts, editGroup }: RoutineFormProps) {
           />
         </CardContent>
       </Card>
+      )}
+
+      {isEditing && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Schedule</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Pick the days this routine runs — it shows up on your Today page
+              for those days.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {WEEK_DAYS.map((d) => {
+                const active = days.includes(d.value);
+                return (
+                  <button
+                    key={d.value}
+                    type="button"
+                    onClick={() => toggleDay(d.value)}
+                    className={cn(
+                      "h-10 w-12 rounded-lg border text-sm font-medium transition-colors",
+                      active
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {d.label}
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <div className="flex gap-3">
