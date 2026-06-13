@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileForm } from "./_components/profile-form";
 import { AvatarUpload } from "./_components/avatar-upload";
@@ -17,13 +18,36 @@ export default async function SettingsPage() {
 
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
+  let { data: profile } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single();
 
-  if (!profile) redirect("/login");
+  // Self-heal: an authenticated user should always have a profile. If the signup
+  // trigger ever missed one, create it here instead of bouncing back to login.
+  if (!profile) {
+    const admin = createAdminClient();
+    await admin.from("profiles").upsert(
+      {
+        id: user.id,
+        full_name:
+          (user.user_metadata?.full_name as string | undefined) ??
+          (user.user_metadata?.name as string | undefined) ??
+          null,
+        avatar_url:
+          (user.user_metadata?.avatar_url as string | undefined) ?? null,
+      },
+      { onConflict: "id" }
+    );
+    ({ data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single());
+  }
+
+  if (!profile) redirect("/dashboard");
 
   const initials =
     profile.full_name
