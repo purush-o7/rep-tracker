@@ -77,20 +77,24 @@ export default async function MyLogsPage({
   const pagination = parsePaginationParams(params);
   const { from, to } = toRange(pagination);
 
-  // Build query with server-side date filtering + pagination
-  // workouts is inner-joined so we can filter logs by exercise name / muscle tag.
-  // A second aliased inner join on workout_tags powers the tag filter without
-  // collapsing the display tags (left-joined via workout_tags(tags(name))).
-  const tagJoin = params.tag
-    ? ", tag_filter:workout_tags!inner(tag_id)"
-    : "";
-  const selectStr =
-    `*, workouts!inner(name, log_type, default_sets, default_reps, workout_tags(tags(name))${tagJoin}), ` +
-    "workout_sets(id, set_number, reps, weight_kg, duration_seconds, distance_m)";
+  // Muscle filter: resolve the workout ids carrying the tag up front, then
+  // filter logs by workout_id — reliable and avoids fragile nested embeds.
+  let tagWorkoutIds: string[] | null = null;
+  if (params.tag) {
+    const { data: tagged } = await supabase
+      .from("workout_tags")
+      .select("workout_id")
+      .eq("tag_id", params.tag);
+    tagWorkoutIds = (tagged ?? []).map((t) => t.workout_id);
+  }
 
+  // workouts is inner-joined so the exercise-name search can filter parent rows.
   let query = supabase
     .from("workout_logs")
-    .select(selectStr, { count: "exact" })
+    .select(
+      "*, workouts!inner(name, log_type, default_sets, default_reps, workout_tags(tags(name))), workout_sets(id, set_number, reps, weight_kg, duration_seconds, distance_m)",
+      { count: "exact" }
+    )
     .eq("user_id", viewingUserId)
     .order("performed_at", { ascending: false });
 
@@ -103,8 +107,8 @@ export default async function MyLogsPage({
   if (params.q) {
     query = query.ilike("workouts.name", `%${params.q}%`);
   }
-  if (params.tag) {
-    query = query.eq("workouts.tag_filter.tag_id", params.tag);
+  if (tagWorkoutIds !== null) {
+    query = query.in("workout_id", tagWorkoutIds);
   }
 
   query = query.range(from, to);
