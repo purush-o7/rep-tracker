@@ -30,6 +30,8 @@ export default async function MyLogsPage({
     pageSize?: string;
     dateFrom?: string;
     dateTo?: string;
+    q?: string;
+    tag?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -75,12 +77,19 @@ export default async function MyLogsPage({
   const { from, to } = toRange(pagination);
 
   // Build query with server-side date filtering + pagination
+  // workouts is inner-joined so we can filter logs by exercise name / muscle tag.
+  // A second aliased inner join on workout_tags powers the tag filter without
+  // collapsing the display tags (left-joined via workout_tags(tags(name))).
+  const tagJoin = params.tag
+    ? ", tag_filter:workout_tags!inner(tag_id)"
+    : "";
+  const selectStr =
+    `*, workouts!inner(name, log_type, default_sets, default_reps, workout_tags(tags(name))${tagJoin}), ` +
+    "workout_sets(id, set_number, reps, weight_kg, duration_seconds, distance_m)";
+
   let query = supabase
     .from("workout_logs")
-    .select(
-      "*, workouts(name, log_type, default_sets, default_reps, workout_tags(tags(name))), workout_sets(id, set_number, reps, weight_kg, duration_seconds, distance_m)",
-      { count: "exact" }
-    )
+    .select(selectStr, { count: "exact" })
     .eq("user_id", viewingUserId)
     .order("performed_at", { ascending: false });
 
@@ -90,10 +99,19 @@ export default async function MyLogsPage({
   if (params.dateTo) {
     query = query.lte("performed_at", `${params.dateTo}T23:59:59.999Z`);
   }
+  if (params.q) {
+    query = query.ilike("workouts.name", `%${params.q}%`);
+  }
+  if (params.tag) {
+    query = query.eq("workouts.tag_filter.tag_id", params.tag);
+  }
 
   query = query.range(from, to);
 
-  const { data: logs, count } = await query;
+  const [{ data: logs, count }, tagsRes] = await Promise.all([
+    query,
+    supabase.from("tags").select("id, name").order("name"),
+  ]);
 
   const totalCount = count ?? 0;
   const totalPages = getTotalPages(totalCount, pagination.pageSize);
@@ -126,7 +144,7 @@ export default async function MyLogsPage({
         <LogsSummary userId={viewingUserId} />
       </Suspense>
       <LogList
-        logs={logs ?? []}
+        logs={(logs as unknown as Parameters<typeof LogList>[0]["logs"]) ?? []}
         readOnly={isViewingPartner}
         currentPage={currentPage}
         pageSize={pagination.pageSize}
@@ -134,6 +152,9 @@ export default async function MyLogsPage({
         totalPages={totalPages}
         dateFrom={params.dateFrom}
         dateTo={params.dateTo}
+        searchQuery={params.q}
+        activeTag={params.tag}
+        tags={tagsRes.data ?? []}
       />
     </div>
   );

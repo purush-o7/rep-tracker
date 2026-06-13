@@ -19,7 +19,7 @@ import { summarizeLog, logSetType } from "./log-helpers";
 import { DataPagination } from "@/components/data-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import type { WorkoutLogWithDetails } from "@/lib/types";
+import type { Tag, WorkoutLogWithDetails } from "@/lib/types";
 
 interface LogListProps {
   logs: WorkoutLogWithDetails[];
@@ -30,6 +30,9 @@ interface LogListProps {
   totalPages: number;
   dateFrom?: string;
   dateTo?: string;
+  searchQuery?: string;
+  activeTag?: string;
+  tags: Tag[];
 }
 
 interface DayGroup {
@@ -64,6 +67,9 @@ export function LogList({
   totalPages,
   dateFrom,
   dateTo,
+  searchQuery,
+  activeTag,
+  tags,
 }: LogListProps) {
   const [selectedLog, setSelectedLog] = useState<WorkoutLogWithDetails | null>(
     null
@@ -142,7 +148,7 @@ export function LogList({
     else toast.success("Log deleted");
   };
 
-  if (totalCount === 0 && !dateFrom && !dateTo) {
+  if (totalCount === 0 && !dateFrom && !dateTo && !searchQuery && !activeTag) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
         <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
@@ -158,7 +164,13 @@ export function LogList({
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <div className="flex-1">
-          <LogFilters dateFrom={dateFrom} dateTo={dateTo} />
+          <LogFilters
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            searchQuery={searchQuery}
+            activeTag={activeTag}
+            tags={tags}
+          />
         </div>
         <Button
           variant="outline"
