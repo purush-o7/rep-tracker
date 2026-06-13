@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PulseIQ Gym — Body Transformation Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0d0f0e;--surface:#151817;--card:#1c1f1e;--border:#2a2e2c;
+  --accent:#c8f56a;--accent2:#4dffc3;--accent3:#ff7043;--text:#e8ece9;--muted:#7a8a7e;
+  --push:#ff7043;--pull:#4dffc3;--legs:#c8f56a;--full:#a78bfa;--arms:#fbbf24;--core:#f472b6;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+
+/* ONBOARDING */
+.ob-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;}
+.ob-overlay.hidden{display:none;}
+.ob-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:26px 22px;width:100%;max-width:420px;animation:fadeIn 0.35s ease;}
+.ob-logo{font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--accent);letter-spacing:3px;margin-bottom:2px;}
+.ob-tagline{font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:22px;}
+.ob-field{margin-bottom:14px;}
+.ob-label{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;display:block;font-weight:600;}
+.ob-input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;padding:11px 14px;border-radius:10px;outline:none;transition:border-color 0.2s;}
+.ob-input:focus{border-color:var(--accent);}
+.ob-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.ob-goal-btn{background:var(--bg);border:2px solid var(--border);color:var(--muted);border-radius:12px;padding:14px 8px;text-align:center;cursor:pointer;transition:all 0.2s;font-size:13px;font-weight:600;}
+.ob-goal-btn.selected{border-color:var(--accent);color:var(--accent);background:rgba(200,245,106,0.07);}
+.ob-goal-icon{font-size:26px;display:block;margin-bottom:5px;}
+.ob-goal-desc{font-size:10px;color:var(--muted);font-weight:400;margin-top:2px;}
+.ob-btn{width:100%;background:var(--accent);color:#0d0f0e;border:none;border-radius:12px;padding:14px;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;cursor:pointer;margin-top:8px;transition:opacity 0.2s;}
+.ob-btn:hover{opacity:0.86;}
+
+/* HEADER */
+header{padding:18px 16px 0;}
+.header-inner{max-width:480px;margin:0 auto;display:flex;align-items:center;gap:10px;}
+.logo-icon{width:38px;height:38px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.logo-text{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;color:var(--accent);}
+.logo-sub{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+.reset-btn{margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:10px;cursor:pointer;letter-spacing:1px;flex-shrink:0;}
+.reset-btn:hover{border-color:var(--accent3);color:var(--accent3);}
+
+/* PROGRESS BAR */
+.btp-bar{max-width:480px;margin:12px auto 0;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;}
+.btp-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.btp-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:600;}
+.btp-legend{font-size:11px;color:var(--muted);}
+.btp-track{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:8px;}
+.btp-fill{height:100%;border-radius:4px;transition:width 0.6s ease;}
+.btp-fill.gain{background:linear-gradient(90deg,var(--accent2),var(--accent));}
+.btp-fill.lose{background:linear-gradient(90deg,var(--accent3),#fbbf24);}
+.btp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.btp-stat{text-align:center;}
+.btp-val{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);}
+.btp-label{font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:1px;}
+
+/* TOP BAR */
+.top-bar{max-width:480px;margin:10px auto 0;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.date-display{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);flex:1;min-width:110px;}
+.date-display span{color:var(--accent);font-weight:700;}
+.weight-entry{display:flex;align-items:center;gap:7px;flex:2;}
+.weight-entry label{font-size:11px;color:var(--muted);white-space:nowrap;}
+.weight-entry input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Space Mono',monospace;font-size:13px;padding:6px 8px;border-radius:8px;width:72px;text-align:center;outline:none;transition:border-color 0.2s;}
+.weight-entry input:focus{border-color:var(--accent);}
+.save-btn{background:var(--accent);color:#0d0f0e;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.save-btn:active{transform:scale(0.96);}
+
+/* STATS */
+.stats-row{max-width:480px;margin:10px auto 0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 6px;text-align:center;}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:22px;line-height:1;}
+.stat-label{font-size:9px;color:var(--muted);margin-top:2px;letter-spacing:1px;}
+
+/* STEPS */
+.steps-banner{max-width:480px;margin:10px auto 0;background:linear-gradient(90deg,rgba(77,255,195,0.07),rgba(77,255,195,0.02));border:1px solid rgba(77,255,195,0.2);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;}
+.steps-icon{font-size:24px;}
+.steps-info{flex:1;}
+.steps-title{font-size:12px;font-weight:600;color:var(--accent2);}
+.steps-sub{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;}
+.steps-input-wrap{display:flex;align-items:center;gap:6px;}
+.steps-input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Space Mono',monospace;font-size:12px;padding:5px 8px;border-radius:7px;width:70px;text-align:center;outline:none;}
+.steps-input:focus{border-color:var(--accent2);}
+.steps-save{background:var(--accent2);color:#0d0f0e;border:none;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;}
+
+/* NUTRITION */
+.nutrition-banner{max-width:480px;margin:10px auto 0;background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.nb-header{padding:12px 16px;background:linear-gradient(90deg,#1a2218,#1c1f1e);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;}
+.nb-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:600;}
+.nb-arrow{color:var(--muted);font-size:13px;transition:transform 0.3s;}
+.nb-arrow.open{transform:rotate(180deg);}
+.nb-body{padding:0 16px;max-height:0;overflow:hidden;transition:max-height 0.4s ease,padding 0.3s;}
+.cal-summary{background:var(--bg);border-radius:10px;padding:12px;margin-bottom:12px;}
+.cal-summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;}
+.cal-block{text-align:center;background:var(--card);border-radius:8px;padding:8px 4px;}
+.cal-val{font-family:'Bebas Neue',sans-serif;font-size:22px;line-height:1;}
+.cal-label{font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:1px;}
+.cal-warning{background:rgba(255,112,67,0.08);border:1px solid rgba(255,112,67,0.3);border-radius:8px;padding:9px 12px;font-size:11px;color:var(--text);line-height:1.6;margin-bottom:8px;}
+.cal-fix{background:rgba(200,245,106,0.06);border:1px solid rgba(200,245,106,0.2);border-radius:8px;padding:9px 12px;font-size:11px;color:var(--muted);line-height:1.6;}
+.cal-fix strong{color:var(--accent);}
+.nb-breakdown-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;font-weight:600;}
+.nb-breakdown{border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.nb-row{display:grid;grid-template-columns:1fr 60px 70px;padding:7px 12px;font-size:12px;border-bottom:1px solid var(--border);}
+.nb-row:last-child{border-bottom:none;}
+.nb-row div:not(:first-child){text-align:right;font-family:'Space Mono',monospace;font-size:11px;}
+.header-row{background:var(--bg);font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.header-row div{font-family:'DM Sans',sans-serif;}
+.accent3-row{background:rgba(255,112,67,0.05);}
+.accent3-row div:not(:first-child){color:var(--accent3);}
+.total-row{background:rgba(200,245,106,0.06);font-weight:700;}
+.total-row div:not(:first-child){color:var(--accent);}
+.nb-body.open{max-height:800px;padding:14px 16px;}
+.shake-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.shake-item{background:var(--bg);border-radius:10px;padding:9px 11px;border-left:3px solid var(--accent2);}
+.shake-name{font-size:10px;color:var(--muted);margin-bottom:3px;}
+.shake-macros{font-size:12px;font-weight:600;color:var(--text);}
+.shake-macros span{color:var(--accent2);}
+.shake-full{grid-column:1/-1;border-left-color:var(--accent3);}
+.nb-total{background:linear-gradient(90deg,rgba(200,245,106,0.08),transparent);border:1px solid rgba(200,245,106,0.2);border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;}
+.nb-total-label{font-size:11px;color:var(--muted);}
+.nb-total-val{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);}
+.food-note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.7;}
+.food-note strong{color:var(--text);}
+
+/* DAY TABS */
+.day-tabs-wrap{max-width:480px;margin:14px auto 0;overflow-x:auto;padding-bottom:4px;}
+.day-tabs-wrap::-webkit-scrollbar{height:2px;}
+.day-tabs-wrap::-webkit-scrollbar-thumb{background:var(--border);}
+.day-tabs{display:flex;gap:6px;width:max-content;padding:0 2px;}
+.day-tab{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;min-width:72px;}
+.day-tab::before{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--tab-color,var(--accent));transform:scaleX(0);transition:transform 0.2s;}
+.day-tab.active::before{transform:scaleX(1);}
+.day-tab.active{border-color:var(--tab-color,var(--accent));background:var(--surface);}
+.day-tab:hover{background:var(--surface);}
+.tab-day{font-family:'Bebas Neue',sans-serif;font-size:18px;}
+.tab-label{font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:1px;}
+.tab-type{font-size:9px;font-weight:600;margin-top:2px;color:var(--text);}
+
+/* WORKOUT */
+.workout-panel{max-width:480px;margin:12px auto 90px;display:none;}
+.workout-panel.active{display:block;animation:fadeIn 0.3s ease;}
+.day-header{background:var(--card);border:1px solid var(--border);border-radius:14px 14px 0 0;padding:16px 18px 14px;border-bottom:none;position:relative;overflow:hidden;}
+.day-header::after{content:'';position:absolute;right:-20px;top:-20px;width:100px;height:100px;background:var(--day-color);opacity:0.05;border-radius:50%;}
+.day-badge{background:var(--day-color);color:#0d0f0e;font-family:'Bebas Neue',sans-serif;font-size:11px;padding:3px 9px;border-radius:6px;letter-spacing:1px;display:inline-block;margin-bottom:4px;}
+.day-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:1px;line-height:1;color:var(--day-color);}
+.day-subtitle{font-size:11px;color:var(--muted);margin-top:3px;}
+.day-muscles{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.muscle-tag{background:rgba(255,255,255,0.06);border-radius:20px;padding:3px 10px;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.rest-card{max-width:480px;margin:12px auto 90px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px 20px;text-align:center;display:none;}
+.rest-card.active{display:block;}
+.rest-emoji{font-size:40px;margin-bottom:10px;}
+.rest-title{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--muted);letter-spacing:2px;}
+.rest-sub{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.7;}
+.exercise-card{background:var(--card);border:1px solid var(--border);border-top:none;padding:0;overflow:hidden;}
+.exercise-card:last-of-type{border-radius:0 0 14px 14px;margin-bottom:10px;}
+.ex-header{padding:13px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);transition:background 0.15s;}
+.ex-header:hover{background:var(--surface);}
+.ex-num{font-family:'Space Mono',monospace;font-size:9px;color:var(--day-color,var(--accent));margin-bottom:2px;}
+.ex-name{font-size:14px;font-weight:600;color:var(--text);}
+.ex-meta{font-size:10px;color:var(--muted);margin-top:2px;}
+.ex-sets-badge{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:4px 9px;font-size:10px;font-family:'Space Mono',monospace;color:var(--muted);white-space:nowrap;}
+.ex-body{max-height:0;overflow:hidden;transition:max-height 0.4s ease;}
+.ex-body.open{max-height:700px;}
+.ex-inner{padding:0 16px 14px;}
+.how-to{background:var(--bg);border-radius:10px;padding:11px 13px;margin-bottom:11px;border-left:3px solid var(--day-color,var(--accent));}
+.how-to-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;}
+.how-to-steps{list-style:none;}
+.how-to-steps li{font-size:12px;color:var(--text);padding:2px 0 2px 16px;position:relative;line-height:1.5;}
+.how-to-steps li::before{content:'→';position:absolute;left:0;color:var(--day-color,var(--accent));font-size:10px;}
+.tip-box{background:rgba(200,245,106,0.05);border:1px solid rgba(200,245,106,0.15);border-radius:8px;padding:7px 11px;font-size:11px;color:var(--muted);margin-top:6px;}
+.tip-box strong{color:var(--accent);}
+.last-session-ref{background:rgba(77,255,195,0.05);border:1px solid rgba(77,255,195,0.2);border-radius:9px;padding:9px 12px;margin-bottom:10px;}
+.last-session-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--accent2);margin-bottom:7px;font-weight:600;}
+.last-set-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.last-set-chip{background:var(--bg);border:1px solid rgba(77,255,195,0.2);border-radius:6px;padding:4px 9px;font-size:11px;font-family:'Space Mono',monospace;color:var(--accent2);}
+.yt-btn{display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:#ff0000;color:#fff;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;text-decoration:none;letter-spacing:0.5px;transition:opacity 0.2s;}
+.yt-btn:hover{opacity:0.85;}
+.left-bonus-block{background:rgba(77,255,195,0.05);border:1px solid rgba(77,255,195,0.25);border-radius:10px;padding:12px 13px;margin-top:12px;}
+.left-bonus-title{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--accent2);font-weight:700;margin-bottom:4px;}
+.left-bonus-sub{font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5;}
+.tut-box{background:rgba(77,255,195,0.05);border:1px solid rgba(77,255,195,0.2);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text);margin-top:8px;line-height:1.7;}
+.tut-box-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--accent2);margin-bottom:5px;font-weight:600;}
+.set-tracker{margin-top:4px;}
+.set-tracker-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;}
+.set-row{display:grid;grid-template-columns:34px 1fr 1fr 32px;gap:5px;align-items:center;margin-bottom:5px;}
+.set-label{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);text-align:center;}
+.set-input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Space Mono',monospace;font-size:12px;padding:6px 6px;border-radius:7px;text-align:center;outline:none;width:100%;transition:border-color 0.2s;}
+.set-input:focus{border-color:var(--day-color,var(--accent));}
+.set-input::placeholder{color:var(--border);font-size:10px;}
+.set-done{width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--bg);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all 0.15s;color:var(--muted);}
+.set-done.checked{color:#0d0f0e;}
+.set-col-headers{display:grid;grid-template-columns:34px 1fr 1fr 32px;gap:5px;margin-bottom:4px;}
+.set-col-h{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:center;}
+.ex-progress{height:2px;background:var(--border);margin:0 16px;border-radius:1px;overflow:hidden;}
+.ex-progress-fill{height:100%;width:0%;transition:width 0.3s ease;border-radius:1px;}
+.complete-banner{background:linear-gradient(135deg,rgba(200,245,106,0.1),rgba(77,255,195,0.05));border:1px solid rgba(200,245,106,0.3);border-radius:14px;padding:18px;text-align:center;margin-bottom:10px;display:none;}
+.complete-banner.show{display:block;}
+.complete-emoji{font-size:34px;margin-bottom:6px;}
+.complete-text{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--accent);letter-spacing:2px;}
+.complete-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+
+/* PANELS */
+.history-panel,.notes-panel,.schedule-panel{max-width:480px;margin:12px auto 90px;display:none;}
+.history-panel.active,.notes-panel.active,.schedule-panel.active{display:block;animation:fadeIn 0.3s ease;}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--accent);letter-spacing:2px;padding:0 4px 10px;border-bottom:1px solid var(--border);margin-bottom:12px;}
+.history-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;}
+.hc-date{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:6px;}
+.hc-weight{font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--accent);line-height:1;}
+.hc-unit{font-size:13px;color:var(--muted);}
+.hc-row{display:flex;justify-content:space-between;align-items:flex-end;}
+.hc-change{font-size:12px;margin-top:4px;}
+.hc-change.up{color:var(--accent2);}
+.hc-change.down{color:var(--accent3);}
+.hc-del-btn{background:none;border:1px solid var(--border);color:var(--muted);padding:4px 9px;border-radius:7px;font-size:11px;cursor:pointer;}
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;}
+.empty-emoji{font-size:34px;margin-bottom:10px;}
+.steps-history-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;}
+.steps-hc-val{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--accent2);line-height:1;}
+.steps-hc-label{font-size:10px;color:var(--muted);margin-top:2px;}
+.steps-hc-bar{height:6px;background:var(--border);border-radius:3px;margin-top:8px;overflow:hidden;}
+.steps-hc-fill{height:100%;background:var(--accent2);border-radius:3px;transition:width 0.4s;}
+
+/* SCHEDULE */
+.schedule-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;}
+.sc-dot{width:10px;height:10px;border-radius:50%;background:var(--sc-color);flex-shrink:0;}
+.sc-day{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--text);flex-shrink:0;width:72px;}
+.sc-info{flex:1;}
+.sc-type{font-size:12px;font-weight:600;}
+.sc-muscles{font-size:10px;color:var(--muted);margin-top:2px;}
+.sc-tip{background:rgba(200,245,106,0.04);border:1px solid rgba(200,245,106,0.1);border-radius:12px;padding:12px 15px;margin-bottom:10px;font-size:12px;color:var(--muted);line-height:1.8;}
+.sc-tip strong{color:var(--accent);}
+
+/* NOTES */
+.notes-today-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;}
+.notes-today-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
+.notes-today-date{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--accent);letter-spacing:1px;line-height:1;}
+.notes-today-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.notes-save-btn{background:var(--accent);color:#0d0f0e;border:none;border-radius:9px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;}
+.notes-save-btn:active{transform:scale(0.96);}
+.notes-section-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;font-weight:600;}
+.notes-checklist{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.notes-check-item{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:8px 10px;cursor:pointer;transition:border-color 0.2s;font-size:12px;color:var(--text);}
+.notes-check-item:has(input:checked){border-color:var(--accent);background:rgba(200,245,106,0.05);}
+.notes-check-item input{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;flex-shrink:0;}
+.notes-textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 13px;font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.6;resize:none;outline:none;min-height:90px;transition:border-color 0.2s;}
+.notes-textarea:focus{border-color:var(--accent);}
+.notes-textarea::placeholder{color:var(--muted);font-size:12px;}
+.notes-sleep-row{display:flex;align-items:center;gap:8px;}
+.notes-mini-input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Space Mono',monospace;font-size:14px;padding:7px 10px;border-radius:8px;width:70px;text-align:center;outline:none;transition:border-color 0.2s;}
+.notes-mini-input:focus{border-color:var(--accent);}
+.notes-mini-label{font-size:12px;color:var(--muted);}
+.notes-mood-row{display:flex;gap:8px;margin-bottom:6px;}
+.mood-btn{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:20px;cursor:pointer;transition:all 0.15s;flex:1;text-align:center;}
+.mood-btn.selected{border-color:var(--accent);background:rgba(200,245,106,0.1);transform:scale(1.08);}
+.notes-mood-hint{font-size:10px;color:var(--muted);letter-spacing:1px;}
+.note-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;}
+.note-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+.note-card-date{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);}
+.note-card-mood{font-size:20px;}
+.note-card-del{background:none;border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:7px;font-size:11px;cursor:pointer;}
+.note-checks-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;}
+.note-check-tag{font-size:10px;padding:3px 8px;border-radius:20px;background:rgba(200,245,106,0.1);border:1px solid rgba(200,245,106,0.2);color:var(--accent);}
+.note-text{font-size:12px;color:var(--text);line-height:1.6;background:var(--bg);border-radius:8px;padding:9px 11px;margin-top:6px;}
+.note-meta-row{display:flex;gap:10px;margin-top:8px;}
+.note-meta-tag{font-size:11px;color:var(--muted);}
+.note-meta-tag span{color:var(--accent2);}
+
+/* NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(13,15,14,0.96);backdrop-filter:blur(10px);border-top:1px solid var(--border);display:flex;padding:10px 0 20px;z-index:100;}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;transition:all 0.15s;padding:5px 0;border:none;background:none;color:var(--muted);}
+.nav-item.active{color:var(--accent);}
+.nav-icon{font-size:18px;}
+.nav-label{font-size:9px;letter-spacing:1px;text-transform:uppercase;}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--accent);color:#0d0f0e;font-size:12px;font-weight:700;padding:9px 18px;border-radius:30px;opacity:0;transition:all 0.3s;z-index:300;white-space:nowrap;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.date-nav-wrap{max-width:480px;margin:12px auto 0;background:var(--card);border:1px solid rgba(200,245,106,0.25);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:8px;}
+.date-nav-btn{background:var(--bg);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:8px;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color 0.15s;}
+.date-nav-btn:hover{border-color:var(--accent);}
+.date-nav-center{flex:1;text-align:center;}
+.date-nav-label{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--accent);letter-spacing:2px;line-height:1;}
+.date-nav-sub{font-size:11px;color:var(--muted);margin-top:2px;letter-spacing:1px;}
+.date-nav-today{background:var(--accent);color:#0d0f0e;border:none;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;}
+.btp-countdown-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+.btp-cd-item{text-align:center;background:var(--bg);border-radius:8px;padding:8px 4px;}
+.btp-cd-val{font-family:'Bebas Neue',sans-serif;font-size:22px;line-height:1;}
+.btp-cd-label{font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:1px;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- ONBOARDING -->
+<div class="ob-overlay" id="obOverlay">
+  <div class="ob-card">
+    <div class="ob-logo">💪 PulseIQ Gym</div>
+    <div class="ob-tagline">Body Transformation Tracker</div>
+    <div class="ob-field">
+      <label class="ob-label">Your Name</label>
+      <input class="ob-input" id="obName" type="text" placeholder="e.g. Manoj" maxlength="30">
+    </div>
+    <div class="ob-row">
+      <div class="ob-field">
+        <label class="ob-label">Current Weight (kg)</label>
+        <input class="ob-input" id="obCurrent" type="number" placeholder="59.3" step="0.1" min="30" max="300">
+      </div>
+      <div class="ob-field">
+        <label class="ob-label">Goal Weight (kg)</label>
+        <input class="ob-input" id="obGoal" type="number" placeholder="67" step="0.1" min="30" max="300">
+      </div>
+    </div>
+    <div class="ob-field">
+      <label class="ob-label">Your Goal</label>
+      <div class="ob-row">
+        <div class="ob-goal-btn" id="btnGain" onclick="selectGoalType('gain')">
+          <span class="ob-goal-icon">📈</span>Gain Weight
+          <div class="ob-goal-desc">Muscle building</div>
+        </div>
+        <div class="ob-goal-btn" id="btnLose" onclick="selectGoalType('lose')">
+          <span class="ob-goal-icon">📉</span>Lose Weight
+          <div class="ob-goal-desc">Fat loss</div>
+        </div>
+      </div>
+    </div>
+    <div class="ob-field">
+      <label class="ob-label">BTP Duration (days) — optional</label>
+      <input class="ob-input" id="obDays" type="number" placeholder="e.g. 21" min="1" max="365">
+    </div>
+    <button class="ob-btn" onclick="startApp()">START MY JOURNEY →</button>
+  </div>
+</div>
+
+<!-- MAIN APP (hidden until onboarding done) -->
+<div id="appShell" style="display:none">
+
+<header>
+  <div class="header-inner">
+    <div class="logo-icon">💪</div>
+    <div>
+      <div class="logo-text">PulseIQ Gym</div>
+      <div class="logo-sub" id="headerSub">Body Transformation</div>
+    </div>
+    <button class="reset-btn" onclick="resetApp()">⟳ RESET</button>
+  </div>
+</header>
+
+<!-- BTP PROGRESS -->
+<div class="btp-bar">
+  <div class="btp-top">
+    <div class="btp-title" id="btpTitle">Goal Progress</div>
+    <div class="btp-legend" id="btpPct">0%</div>
+  </div>
+  <div class="btp-track"><div class="btp-fill gain" id="btpFill" style="width:0%"></div></div>
+  <div class="btp-stats">
+    <div class="btp-stat"><div class="btp-val" id="btpStart">—</div><div class="btp-label">Start kg</div></div>
+    <div class="btp-stat"><div class="btp-val" id="btpCurrent">—</div><div class="btp-label">Current</div></div>
+    <div class="btp-stat"><div class="btp-val" id="btpChanged" style="color:var(--accent2)">+0.0</div><div class="btp-label" id="btpChangedLabel">Gained</div></div>
+    <div class="btp-stat"><div class="btp-val" id="btpGoal">—</div><div class="btp-label">Target</div></div>
+  </div>
+  <div id="btpCountdown"></div>
+</div>
+
+<!-- DATE + WEIGHT -->
+<div class="top-bar">
+  <div class="date-display" id="dateDisplay">Today</div>
+  <div class="weight-entry">
+    <label>Weight</label>
+    <input type="number" id="weightInput" placeholder="kg" step="0.1" min="30" max="300">
+    <span style="font-size:11px;color:var(--muted)">kg</span>
+  </div>
+  <button class="save-btn" onclick="saveWeight()">Save</button>
+</div>
+
+<!-- STATS -->
+<div class="stats-row">
+  <div class="stat-card"><div class="stat-val" id="statCurrent" style="color:var(--accent)">—</div><div class="stat-label">Curr kg</div></div>
+  <div class="stat-card"><div class="stat-val" id="statChanged" style="color:var(--accent2)">+0.0</div><div class="stat-label" id="statChangedLabel">Gained</div></div>
+  <div class="stat-card"><div class="stat-val" id="statToGo" style="color:var(--accent3)">—</div><div class="stat-label">To Goal</div></div>
+  <div class="stat-card"><div class="stat-val" id="statGoal" style="color:var(--muted)">—</div><div class="stat-label">Target</div></div>
+</div>
+
+<!-- STEPS -->
+<div class="steps-banner">
+  <div class="steps-icon">🚶</div>
+  <div class="steps-info">
+    <div class="steps-title">Daily 10,000 Steps</div>
+    <div class="steps-sub">Every day — gym days + rest days.<br><strong style="color:var(--accent)">Don't jog on leg day — walk.</strong></div>
+  </div>
+  <div class="steps-input-wrap">
+    <input type="number" class="steps-input" id="stepsInput" placeholder="10000" min="0" max="99999">
+    <button class="steps-save" onclick="saveSteps()">Log</button>
+  </div>
+</div>
+
+<!-- NUTRITION CALORIE COUNTER -->
+<div class="nutrition-banner">
+  <div class="nb-header" onclick="toggleNutrition()">
+    <span class="nb-title">🥤 Daily Nutrition — 1,761 kcal · 134g Protein</span>
+    <span class="nb-arrow" id="nbArrow">▼</span>
+  </div>
+  <div class="nb-body" id="nbBody">
+
+    <!-- CALORIE SUMMARY BAR -->
+    <div class="cal-summary">
+      <div class="cal-summary-row">
+        <div class="cal-block">
+          <div class="cal-val" style="color:var(--accent3)">1,761</div>
+          <div class="cal-label">Total kcal</div>
+        </div>
+        <div class="cal-block">
+          <div class="cal-val" style="color:var(--accent2)">134g</div>
+          <div class="cal-label">Protein</div>
+        </div>
+        <div class="cal-block">
+          <div class="cal-val" style="color:var(--arms)">212g</div>
+          <div class="cal-label">Carbs</div>
+        </div>
+        <div class="cal-block">
+          <div class="cal-val" style="color:var(--full)">54g</div>
+          <div class="cal-label">Fat</div>
+        </div>
+      </div>
+      <div class="cal-warning">
+        ⚠️ <strong>289 kcal BELOW maintenance</strong> (2,050 kcal needed to maintain 59.3 kg). You need to add ~300–400 kcal more daily to gain muscle. See fix below.
+      </div>
+      <div class="cal-fix">
+        💡 <strong>Easy fix — add any one:</strong> 100g rice (+130 kcal) · 1 extra banana (+105 kcal) · 1 extra egg (+70 kcal) · 200ml buffalo milk (+94 kcal) · 2 rotis (+160 kcal). Target: <strong>2,200–2,400 kcal/day</strong> for steady muscle gain.
+      </div>
+    </div>
+
+    <!-- BREAKDOWN TABLE -->
+    <div class="nb-breakdown-title">Full Breakdown</div>
+    <div class="nb-breakdown">
+      <div class="nb-row header-row">
+        <div>Item</div><div>kcal</div><div>Protein</div>
+      </div>
+      <div class="nb-row"><div>Formula 1 (3 scoops × 2)</div><div>270</div><div>27g</div></div>
+      <div class="nb-row"><div>Protein Powder (2 scoops)</div><div>46</div><div>10g</div></div>
+      <div class="nb-row"><div>ShakeMate (2 scoops)</div><div>106</div><div>10.75g</div></div>
+      <div class="nb-row"><div>DinoShake (1 scoop)</div><div>35</div><div>3g</div></div>
+      <div class="nb-row accent3-row"><div>Rebuild Strength (1 sachet)</div><div>190</div><div>24g</div></div>
+      <div class="nb-row"><div>Buffalo Milk 500ml</div><div>235</div><div>16g</div></div>
+      <div class="nb-row"><div>Boiled Eggs × 4</div><div>280</div><div>24g</div></div>
+      <div class="nb-row"><div>Banana × 2</div><div>210</div><div>2.6g</div></div>
+      <div class="nb-row"><div>Oats 100g</div><div>389</div><div>17g</div></div>
+      <div class="nb-row total-row"><div>TOTAL</div><div>1,761</div><div>134g</div></div>
+    </div>
+
+    <div class="food-note" style="margin-top:10px">
+      <strong>Shake timing:</strong> Shake 1 (morning F1×3+PPP+ShakeMate+Dino+Oats+2eggs+milk) → Shake 2 (pre-workout F1×3+milk) → Rebuild within 30 min post-workout → Shake 3 if needed evening · Eggs + bananas anytime
+    </div>
+  </div>
+</div>
+
+<!-- MAIN AREA -->
+<div id="mainArea">
+  <!-- DATE NAV BAR -->
+  <div class="date-nav-wrap">
+    <button class="date-nav-btn" onclick="shiftDate(-1)" title="Previous day">‹</button>
+    <div class="date-nav-center">
+      <div class="date-nav-label" id="dateNavLabel">Today</div>
+      <div class="date-nav-sub" id="dateNavSub"></div>
+    </div>
+    <button class="date-nav-btn" onclick="shiftDate(1)" id="dateNavNext" title="Next day">›</button>
+    <button class="date-nav-today" onclick="goToday()" id="dateNavTodayBtn" style="display:none">↩ Today</button>
+  </div>
+  <!-- LAST SESSION HINT -->
+  <div id="lastSessionBar" style="display:none;max-width:480px;margin:6px auto 0;background:rgba(77,255,195,0.06);border:1px solid rgba(77,255,195,0.2);border-radius:10px;padding:9px 14px;font-size:11px;color:var(--accent2);cursor:pointer;" onclick="goLastSession()">
+    📋 Last session logged: <span id="lastSessionDate" style="font-weight:700"></span> — tap to view
+  </div>
+  <div class="day-tabs-wrap"><div class="day-tabs" id="dayTabs"></div></div>
+  <div id="workoutContainer"></div>
+</div>
+
+<!-- HISTORY -->
+<div class="history-panel" id="historyPanel">
+  <div class="section-title">📊 Progress Tracker</div>
+  <div id="weightHistoryList"></div>
+  <div class="section-title" style="margin-top:16px">🚶 Steps History</div>
+  <div id="stepsHistoryList"></div>
+  <div class="section-title" style="margin-top:16px">🏋️ Workout History</div>
+  <div id="workoutHistoryList"></div>
+</div>
+
+<!-- NOTES -->
+<div class="notes-panel" id="notesPanel">
+  <div class="section-title">📝 Daily Journal</div>
+  <div class="notes-today-card">
+    <div class="notes-today-header">
+      <div>
+        <div class="notes-today-date" id="notesTodayDate">Today</div>
+        <div class="notes-today-sub">Log what you did, ate, felt</div>
+      </div>
+      <button class="notes-save-btn" onclick="saveNote()">Save</button>
+    </div>
+    <div class="notes-section-label">✅ What I Did Today</div>
+    <div class="notes-checklist">
+      <label class="notes-check-item"><input type="checkbox" id="chk_workout"><span>Completed workout</span></label>
+      <label class="notes-check-item"><input type="checkbox" id="chk_shake1"><span>Shake 1 (morning)</span></label>
+      <label class="notes-check-item"><input type="checkbox" id="chk_shake2"><span>Shake 2 (pre-workout)</span></label>
+      <label class="notes-check-item"><input type="checkbox" id="chk_shake3"><span>Shake 3 (evening)</span></label>
+      <label class="notes-check-item"><input type="checkbox" id="chk_rebuild"><span>Rebuild Strength</span></label>
+      <label class="notes-check-item"><input type="checkbox" id="chk_eggs"><span>3 boiled eggs</span></label>
+      <label class="notes-check-item"><input type="checkbox" id="chk_chicken"><span>100g chicken</span></label>
+      <label class="notes-check-item"><input type="checkbox" id="chk_oats"><span>Oats 60g</span></label>
+      <label class="notes-check-item"><input type="checkbox" id="chk_steps"><span>10,000 steps done</span></label>
+      <label class="notes-check-item"><input type="checkbox" id="chk_sleep"><span>7.5+ hrs sleep</span></label>
+    </div>
+    <div class="notes-section-label" style="margin-top:12px">📝 Notes / What I Noticed</div>
+    <textarea class="notes-textarea" id="noteText" placeholder="How did the workout feel? Any pain? Energy levels, mood, extra food, anything worth remembering..."></textarea>
+    <div class="notes-section-label" style="margin-top:10px">😴 Sleep last night</div>
+    <div class="notes-sleep-row">
+      <input type="number" class="notes-mini-input" id="noteSleep" placeholder="7.5" step="0.5" min="3" max="12">
+      <span class="notes-mini-label">hours</span>
+    </div>
+    <div class="notes-section-label" style="margin-top:10px">💪 How was the workout?</div>
+    <div class="notes-mood-row">
+      <button class="mood-btn" data-val="💀" onclick="selectMood(this)" title="Destroyed me">💀</button>
+      <button class="mood-btn" data-val="🔥" onclick="selectMood(this)" title="Strong session">🔥</button>
+      <button class="mood-btn" data-val="✅" onclick="selectMood(this)" title="Good, steady">✅</button>
+      <button class="mood-btn" data-val="😐" onclick="selectMood(this)" title="Average">😐</button>
+      <button class="mood-btn" data-val="😴" onclick="selectMood(this)" title="Low energy">😴</button>
+    </div>
+    <div class="notes-mood-hint" id="moodHint">Tap to rate your session</div>
+  </div>
+  <div class="section-title" style="margin-top:4px">📚 Past Entries</div>
+  <div id="notesList"></div>
+</div>
+
+<!-- SCHEDULE -->
+<div class="schedule-panel" id="schedulePanel">
+  <div class="section-title">📅 6-Day Weekly Schedule</div>
+  <div class="sc-tip">
+    <strong>6-Day Split</strong> — Mon Push · Tue Pull · Wed Legs · Thu Full Body · Fri Arms · Sat Core+Mob · Sun REST<br>
+    <strong>10,000 steps EVERY day</strong> — walk, don't jog on leg/rest days.<br>
+    <strong>Rebuild Strength</strong> — only on training days, within 30 min post-workout.
+  </div>
+  <div id="scheduleCards"></div>
+  <div class="sc-tip">
+    <strong>Progressive overload:</strong> Add 0.5 kg or 1 rep every 1–2 weeks.<br>
+    <strong>Sleep:</strong> 7.5+ hours — muscle is built during sleep, not in the gym.<br>
+    <strong>Calorie surplus:</strong> 10k steps burns ~350 kcal — eat it back. Don't let net drop below 1,600 kcal.<br>
+    <strong>Karada scan:</strong> Every Sunday morning, fasted, same time. This is your truth.
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="nav-item active" id="navWorkout" onclick="switchNav('workout')"><span class="nav-icon">🏋️</span><span class="nav-label">Workout</span></button>
+  <button class="nav-item" id="navHistory" onclick="switchNav('history')"><span class="nav-icon">📊</span><span class="nav-label">Progress</span></button>
+  <button class="nav-item" id="navNotes" onclick="switchNav('notes')"><span class="nav-icon">📝</span><span class="nav-label">Journal</span></button>
+  <button class="nav-item" id="navSchedule" onclick="switchNav('schedule')"><span class="nav-icon">📅</span><span class="nav-label">Schedule</span></button>
+</div>
+
+</div><!-- end appShell -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// USER PROFILE (from onboarding or localStorage)
+// ============================================================
+let profile = JSON.parse(localStorage.getItem('piq_profile') || 'null');
+let goalType = profile ? profile.goalType : 'gain'; // 'gain' or 'lose'
+
+function selectGoalType(type) {
+  goalType = type;
+  document.getElementById('btnGain').classList.toggle('selected', type === 'gain');
+  document.getElementById('btnLose').classList.toggle('selected', type === 'lose');
+}
+
+function startApp() {
+  const name = document.getElementById('obName').value.trim();
+  const current = parseFloat(document.getElementById('obCurrent').value);
+  const goal = parseFloat(document.getElementById('obGoal').value);
+  if (!name) { showToast('Enter your name'); return; }
+  if (!current || current < 30) { showToast('Enter current weight'); return; }
+  if (!goal || goal < 30) { showToast('Enter goal weight'); return; }
+  if (!goalType) { showToast('Select your goal'); return; }
+  // Validate direction
+  if (goalType === 'gain' && goal <= current) { showToast('Goal weight must be higher for gaining'); return; }
+  if (goalType === 'lose' && goal >= current) { showToast('Goal weight must be lower for losing'); return; }
+
+  profile = { name, startWeight: current, goalWeight: goal, goalType, createdAt: new Date().toISOString() };
+  const days = parseInt(document.getElementById('obDays').value);
+  if (days && days > 0) {
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + days);
+    profile.btpEndDate = endDate.toISOString();
+    profile.btpTotalDays = days;
+    profile.btpStartDate = new Date().toISOString();
+  }
+  localStorage.setItem('piq_profile', JSON.stringify(profile));
+  document.getElementById('obOverlay').classList.add('hidden');
+  document.getElementById('appShell').style.display = 'block';
+  initApp();
+}
+
+function resetApp() {
+  // confirm() is blocked in sandboxed iframes — use custom modal
+  const existing = document.getElementById('resetModal');
+  if (existing) { existing.remove(); return; }
+  const modal = document.createElement('div');
+  modal.id = 'resetModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:998;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px 20px;max-width:340px;width:100%;text-align:center">
+      <div style="font-size:32px;margin-bottom:10px">⚠️</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--accent3);letter-spacing:1px;margin-bottom:8px">RESET ALL DATA?</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6">This will clear your profile, all weight entries, steps history, and journal. Cannot be undone.</div>
+      <div style="display:flex;gap:10px">
+        <button onclick="document.getElementById('resetModal').remove()" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:12px;font-size:14px;cursor:pointer;font-weight:600">Cancel</button>
+        <button onclick="localStorage.clear();location.reload()" style="flex:1;background:var(--accent3);border:none;color:#fff;border-radius:10px;padding:12px;font-size:14px;cursor:pointer;font-weight:700">Reset</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+// ============================================================
+// DATA
+// ============================================================
+let setData = JSON.parse(localStorage.getItem('piq_set_data') || '{}');
+let weightHistory = JSON.parse(localStorage.getItem('piq_weight_history') || '[]');
+let stepsHistory = JSON.parse(localStorage.getItem('piq_steps_history') || '[]');
+let notesHistory = JSON.parse(localStorage.getItem('piq_notes') || '[]');
+let selectedMood = '';
+let currentDay = 0;
+let currentNav = 'workout';
+
+// Date-based set tracking — infinite days
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+let activeDate = todayStr();
+
+const CHECK_LABELS = {
+  chk_workout:'Workout done', chk_shake1:'Shake 1', chk_shake2:'Shake 2',
+  chk_shake3:'Shake 3', chk_rebuild:'Rebuild Strength', chk_eggs:'3 eggs',
+  chk_chicken:'100g chicken', chk_oats:'Oats', chk_steps:'10k steps', chk_sleep:'7.5h sleep'
+};
+
+const SCHEDULE_DATA = [
+  { day:'Monday',    type:'DAY 1 — CHEST',     muscles:'Upper · Mid · Lower Chest · Triceps', color:'var(--push)' },
+  { day:'Tuesday',   type:'DAY 2 — BACK',      muscles:'Lats · Mid-Back · Rear Delts · Biceps', color:'var(--pull)' },
+  { day:'Wednesday', type:'DAY 3 — SHOULDERS', muscles:'Front · Side · Rear Delts · Traps',   color:'var(--legs)' },
+  { day:'Thursday',  type:'DAY 4 — LEGS',      muscles:'Quads · Hamstrings · Glutes · Calves', color:'var(--full)' },
+  { day:'Friday',    type:'DAY 5 — ARMS',      muscles:'Biceps · Triceps (3 heads) · Forearms', color:'var(--arms)' },
+  { day:'Saturday',  type:'DAY 6 — CORE+WEAK POINTS', muscles:'Abs · Obliques · Rear Delts · Calves', color:'var(--core)' },
+  { day:'Sunday',    type:'REST DAY',           muscles:'10,000 steps walk · Stretch only',  color:'var(--muted)' }
+];
+
+const WORKOUTS = [
+  { id:'chest', label:'DAY 1 — CHEST', color:'var(--push)', badge:'CHEST', muscles:['Upper Chest','Mid Chest','Lower Chest','Triceps'],
+    exercises:[
+      { name:'Barbell / Machine Bench Press', sets:4, reps:'8–10', weight:'Gym: Barbell or Smith Machine · Home fallback: 10–12.5 kg DB',
+        how:['Lie flat, grip slightly wider than shoulders','Lower bar to mid-chest with control','Press up — don\'t lock elbows fully','Feet planted, slight arch, shoulder blades pinched','If only dumbbells available — same motion, both arms'],
+        tut:'⬇️ 3 sec lower to chest → ⏸ 1 sec pause (bar touches chest) → ⬆️ 1 sec press. This is your heaviest chest movement — the pause removes bounce and forces pure strength.',
+        tip:'Main mass builder for overall chest size. Ask staff for a spotter on heavy sets.' },
+      { name:'Incline Barbell / DB Press', sets:3, reps:'10', weight:'Gym: Incline bench + barbell or DB · Home: rolled towel + DB',
+        how:['Set bench to 30° incline','Press up and slightly back','Lower to upper chest, not neck','Elbows at 45° from torso'],
+        tut:'⬇️ 3 sec lower → ⏸ 1 sec at chest → ⬆️ 1 sec press. Upper chest is the sub-muscle most people neglect — this is non-negotiable for a "filled out" chest look.',
+        tip:'This is what separates a flat chest from a full, rounded chest.' },
+      { name:'Cable / Dumbbell Chest Fly', sets:3, reps:'12', weight:'Gym: Cable machine (mid pulley) · Home: 7.5 kg DB',
+        how:['Cable: stand center, one handle each side, slight forward lean','Bring hands together in front of chest in an arc','Dumbbell: lie on bench, same arc motion','Squeeze chest hard at the center'],
+        tut:'⬇️ 3 sec open arms wide (stretch) → ⏸ 1 sec hold at full stretch → ⬆️ 1 sec squeeze together. Cables give constant tension through the whole range — better than dumbbells for this exercise if available.',
+        tip:'The squeeze at the center is what carves the inner chest line.' },
+      { name:'Decline Push-ups or Decline Press', sets:3, reps:'12–15', weight:'Gym: Decline bench + DB · Home: feet elevated push-ups',
+        how:['Decline bench: feet higher than head, press dumbbells up','Or: feet on a chair/bed, hands on floor, push-up motion','Targets lower chest fibers specifically'],
+        tut:'⬇️ 2 sec lower → ⏸ 1 sec at bottom → ⬆️ 1 sec press/push. Lower chest is the third sub-muscle — completes the full chest development.',
+        tip:'Lower chest gives that defined under-line when you wear a fitted shirt.' },
+      { name:'Cable Crossover (High to Low)', sets:3, reps:'12 each side', weight:'Gym: Cable machine, pulleys set high · Home: resistance band if available, else skip',
+        how:['Set pulleys above head height','Pull both handles down and across body to opposite hip','Squeeze chest at the bottom','Controlled return to start'],
+        tut:'⬇️ 1 sec pull down → ⏸ 1 sec squeeze at bottom → ⬆️ 2 sec controlled return. This finishing move targets the lower-inner chest fibers that pressing movements can\'t reach.',
+        tip:'Finisher — go lighter, focus entirely on the squeeze, not the weight.' },
+      { name:'Tricep Pushdown (Cable)', sets:3, reps:'12', weight:'Gym: Cable machine + rope or bar attachment · Home: 5–7.5 kg DB kickback',
+        how:['Stand facing cable, elbows pinned to sides','Push bar/rope down to full extension','Squeeze triceps at the bottom','Control the return — don\'t let weight pull arms up fast'],
+        tut:'⬆️ 1 sec push down → ⏸ 1 sec squeeze at lockout → ⬇️ 2 sec controlled return. Elbows must stay glued to sides — any swing wastes the tricep stimulus.',
+        tip:'Triceps are 2/3 of your arm size — this exercise on chest day adds volume.' },
+      { name:'Overhead Rope Tricep Extension', sets:3, reps:'12', weight:'Gym: Cable + rope, facing away · Home: 10kg DB overhead extension',
+        how:['Face away from cable machine, rope overhead','Extend arms forward and down','Elbows stay close to head','Full stretch at top, full extension at bottom'],
+        tut:'⬇️ 3 sec lower behind head (stretch) → ⏸ 1 sec → ⬆️ 1 sec extend and squeeze. This hits the long head of triceps — the part that gives the "horseshoe" shape.',
+        tip:'The horseshoe tricep shape comes from this exercise specifically.' }
+    ]
+  },
+  { id:'back', label:'DAY 2 — BACK', color:'var(--pull)', badge:'BACK', muscles:['Lats','Mid-Back','Lower Back','Rear Delts','Biceps'],
+    exercises:[
+      { name:'Lat Pulldown (Wide Grip)', sets:4, reps:'10–12', weight:'Gym: Lat pulldown machine · Home: resistance band or skip, do extra rows',
+        how:['Grip wide, slightly wider than shoulders','Pull bar down to upper chest','Squeeze shoulder blades together at bottom','Control the return to full stretch overhead'],
+        tut:'⬆️ 1 sec pull down → ⏸ 1 sec squeeze at chest → ⬇️ 3 sec controlled return to full stretch. This builds lat WIDTH — the V-taper that makes shoulders look wider than they are.',
+        tip:'Wide grip = width. This is the #1 exercise for the V-taper look.' },
+      { name:'Seated Cable Row (or Barbell Row)', sets:4, reps:'10–12', weight:'Gym: Cable row machine or barbell · Home: 10–12.5 kg DB bent-over row',
+        how:['Sit upright, chest out, pull handle to lower belly','Squeeze shoulder blades hard at the end','Return with control to full arm extension','Keep back straight throughout — no rounding'],
+        tut:'⬆️ 1 sec pull → ⏸ 1 sec squeeze (shoulder blades together) → ⬇️ 3 sec return to stretch. This builds back THICKNESS — the depth that makes your back look 3D from the side.',
+        tip:'Width (pulldown) + thickness (row) together = complete back development.' },
+      { name:'Single-Arm Lat Pulldown / Row', sets:3, reps:'12 each side', weight:'Gym: Single handle cable attachment · Home: single-arm DB row 10–12.5 kg',
+        how:['Single handle, pull down/back to ribs one side at a time','Full stretch at top, full contraction at bottom','Left arm gets priority — your symmetry fix continues here'],
+        tut:'⬆️ 1 sec pull → ⏸ 2 sec squeeze → ⬇️ 3 sec stretch. Unilateral work — left side gets matched or extra reps here for your symmetry goal.',
+        tip:'This is where your left-right imbalance gets fixed with real back volume.' },
+      { name:'Face Pulls (Cable)', sets:3, reps:'15', weight:'Gym: Cable + rope, set at face height · Home: resistance band or DB reverse fly',
+        how:['Rope attachment at face height','Pull rope toward face, elbows flare out wide','Squeeze rear delts and upper back at the end','Control the return'],
+        tut:'⬆️ 1 sec pull to face → ⏸ 1 sec squeeze rear delts → ⬇️ 2 sec return. Rear delts are THE most neglected muscle in every gym — this single exercise transforms how your shoulders look from behind.',
+        tip:'This is the "secret" exercise that makes the difference between a flat back and a 3D back.' },
+      { name:'Straight Arm Pulldown (Cable)', sets:3, reps:'12', weight:'Gym: Cable, straight bar attachment · Home: DB pullover on bench',
+        how:['Arms straight, slight bend at elbow','Pull bar down from overhead to thighs in an arc','Lats do all the work — no elbow bending','Feel the stretch at the top'],
+        tut:'⬇️ 1 sec pull down → ⏸ 1 sec squeeze lats → ⬆️ 3 sec return to overhead stretch. This isolates lats without biceps interference — pure lat development.',
+        tip:'Great for feeling your lats work in isolation — many people never feel this until this exercise.' },
+      { name:'Barbell or DB Bicep Curl', sets:4, reps:'10–12', weight:'Gym: EZ bar or barbell · Home: 7.5–10 kg DB',
+        how:['Stand tall, elbows pinned to sides','Curl up, squeeze at top','Lower fully — full stretch at bottom','Strict — no swinging the back'],
+        tut:'⬆️ 1 sec curl → ⏸ 1 sec squeeze + supinate → ⬇️ 3 sec lower to full stretch. Back day biceps — your biceps are already warm from rowing, this finishes them properly.',
+        tip:'Biceps assist in every pulling movement — train them after back for maximum pump.' },
+      { name:'Hyperextension (Back Extension)', sets:3, reps:'15', weight:'Gym: Roman chair / hyperextension bench · Home: Superman hold on floor',
+        how:['Gym: hips on pad, bend forward at waist, raise back up to straight','Squeeze glutes and lower back at top','Home: Superman hold — same muscles'],
+        tut:'⬆️ 1 sec raise → ⏸ 2 sec squeeze at top → ⬇️ 2 sec lower. Lower back strength prevents the RDL pain we discussed — this is the direct fix.',
+        tip:'This directly strengthens the muscles that were causing your RDL lower back pain.' }
+    ]
+  },
+  { id:'shoulders', label:'DAY 3 — SHOULDERS', color:'var(--legs)', badge:'SHOULDERS', muscles:['Front Delts','Side Delts','Rear Delts','Traps'],
+    exercises:[
+      { name:'Barbell or DB Overhead Press', sets:4, reps:'8–10', weight:'Gym: Barbell or seated DB press · Home: 7.5–10 kg DB seated',
+        how:['Seated or standing, press overhead from shoulder height','Don\'t arch back excessively — core braced','Lower to shoulder level with control','Full lockout at top without hyperextending elbows'],
+        tut:'⬆️ 1 sec press → ⏸ 1 sec hold at top → ⬇️ 3 sec lower. Main shoulder mass builder — heaviest shoulder exercise of the week.',
+        tip:'Overall shoulder size and strength foundation.' },
+      { name:'Cable or DB Lateral Raise', sets:4, reps:'12–15', weight:'Gym: Cable at low pulley, single handle · Home: 5–7.5 kg DB',
+        how:['Cable: stand side-on to machine, raise arm out to side','DB: standard lateral raise both arms','Lead with elbow, stop at shoulder height','Lower slowly'],
+        tut:'⬆️ 1 sec raise → ⏸ 1 sec hold → ⬇️ 3 sec lower. Side delts = shoulder WIDTH. Cables give constant tension — better than dumbbells if available. This is THE width-building exercise.',
+        tip:'Side delts are the #1 muscle for the "wide shoulders, narrow waist" look you want.' },
+      { name:'Rear Delt Cable Fly / Reverse Pec Deck', sets:4, reps:'15', weight:'Gym: Pec deck reversed or cable cross · Home: 5–7.5 kg DB reverse fly',
+        how:['Pec deck: face the pad, pull handles backward','Cable: cross-body pulls to opposite sides','DB: bent over, raise arms to sides','Squeeze rear delts hard'],
+        tut:'⬆️ 1 sec pull back → ⏸ 1 sec squeeze → ⬇️ 3 sec return. Rear delts AGAIN on shoulder day — they need double frequency because they\'re small and weak in almost everyone. This is your symmetry + 3D shoulder builder.',
+        tip:'Train rear delts twice a week minimum — back day AND shoulder day. This is the secret to round shoulders.' },
+      { name:'Front Raise (Plate or DB)', sets:3, reps:'12', weight:'Gym: Weight plate or DB · Home: 5 kg DB',
+        how:['Hold plate or DB with both hands (or one DB each hand)','Raise straight in front to shoulder height','Lower with control','Slight bend in elbows'],
+        tut:'⬆️ 1 sec raise → ⏸ 1 sec hold → ⬇️ 3 sec lower. Front delts get plenty of work from pressing — light weight here is enough.',
+        tip:'Don\'t overdo this — front delts are usually already overdeveloped from pressing movements.' },
+      { name:'Barbell or DB Shrug', sets:4, reps:'12–15', weight:'Gym: Barbell or trap bar · Home: 12.5 kg DB each',
+        how:['Hold weight at sides or in front','Shrug straight up toward ears','Hold and squeeze at top','Lower slowly for full stretch'],
+        tut:'⬆️ 1 sec shrug → ⏸ 2 sec squeeze → ⬇️ 2 sec lower. Traps complete the shoulder look from the front and the side — a developed trap makes the neck-to-shoulder line look powerful.',
+        tip:'Traps are highly visible in fitted t-shirts — this is a "coach look" exercise.' },
+      { name:'Arnold Press', sets:3, reps:'10', weight:'Gym or Home: 7.5–10 kg DB',
+        how:['Start with DBs at shoulder height, palms facing you','Press up while rotating palms to face forward','Reverse the rotation on the way down','Full range of motion'],
+        tut:'⬆️ 1 sec press + rotate → ⏸ 1 sec hold → ⬇️ 3 sec lower + rotate back. This hits front AND side delts through the rotation — more sub-muscle activation than standard press.',
+        tip:'The rotation is what makes this different — don\'t skip it for a regular press.' }
+    ]
+  },
+  { id:'legs', label:'DAY 4 — LEGS', color:'var(--full)', badge:'LEGS', muscles:['Quads','Hamstrings','Glutes','Calves'],
+    exercises:[
+      { name:'Leg Press Machine', sets:4, reps:'10–12', weight:'Gym: Leg press machine · Home: Goblet squat 12.5 kg',
+        how:['Sit in machine, feet shoulder-width on platform','Lower until knees at 90°','Press back up without locking knees','Don\'t let lower back round at bottom'],
+        tut:'⬇️ 3 sec lower → ⏸ 1 sec at bottom → ⬆️ 1 sec press. Safest way to overload quads heavily — machine controls the path so you can push hard.',
+        tip:'This is where you can finally use heavy weight safely beyond your 12.5kg dumbbell limit.' },
+      { name:'Leg Extension Machine', sets:3, reps:'12–15', weight:'Gym: Leg extension machine · Home: skip or resistance band',
+        how:['Sit, pad on top of ankles','Extend legs straight out','Squeeze quads hard at top','Lower with control'],
+        tut:'⬆️ 1 sec extend → ⏸ 1 sec squeeze quads hard → ⬇️ 3 sec lower. Pure quad isolation — this is the sub-muscle exercise dumbbells alone can\'t replicate well.',
+        tip:'This gives quads that separated, defined look — pure isolation.' },
+      { name:'Leg Curl Machine (Lying or Seated)', sets:4, reps:'12', weight:'Gym: Leg curl machine · Home: RDL 10–12.5 kg',
+        how:['Lie or sit in machine, pad behind ankles','Curl heels toward glutes','Squeeze hamstrings at top','Lower with control'],
+        tut:'⬆️ 1 sec curl → ⏸ 1 sec squeeze → ⬇️ 3 sec lower. Hamstrings are the most neglected leg muscle — this directly builds them, complementing your RDLs.',
+        tip:'Hamstrings balance your quads — essential for both strength and aesthetics from behind.' },
+      { name:'Walking Lunges (DB or Bodyweight)', sets:3, reps:'10 each leg', weight:'Gym or Home: 7.5–10 kg DB each hand',
+        how:['Hold dumbbells at sides','Step forward into lunge, front knee behind toes','Push through front heel to bring back leg forward into next lunge','Continuous walking motion'],
+        tut:'⬇️ 2 sec lower → ⏸ 1 sec → ⬆️ 1 sec drive forward. Walking lunges hit quads, glutes, AND hamstrings together with a balance/stability component machines don\'t give.',
+        tip:'This is the exercise that builds functional, athletic-looking legs, not just big legs.' },
+      { name:'Romanian Deadlift (Barbell or DB)', sets:4, reps:'10', weight:'Gym: Barbell · Home: 10–12.5 kg DB each',
+        how:['Hinge at hips, weight close to legs','Lower until deep hamstring stretch, back flat','Drive hips forward, squeeze glutes','Don\'t round the lower back — use the cues from before'],
+        tut:'⬇️ 3 sec hinge down → ⏸ 1 sec at stretch → ⬆️ 1 sec drive up. Same exercise as before but now with barbell option for more weight — your hamstrings, glutes, and lower back all develop here.',
+        tip:'Apply everything we discussed about lower back form — barbell makes form even more critical.' },
+      { name:'Calf Raise (Standing or Seated Machine)', sets:4, reps:'15–20', weight:'Gym: Calf raise machine · Home: 12.5 kg DB each, standing',
+        how:['Rise onto toes as high as possible','Hold and squeeze at top','Lower for full stretch at bottom','Never bounce'],
+        tut:'⬆️ 1 sec rise → ⏸ 2 sec hold → ⬇️ 2 sec lower. Calves need volume and frequency — machine allows progressive overload beyond dumbbell limits.',
+        tip:'Calves are genetically stubborn for most people — consistency over months is what works.' },
+      { name:'Plank + Leg Raises (Core finisher)', sets:3, reps:'45 sec plank + 15 leg raises', weight:'Bodyweight',
+        how:['Plank: forearms down, straight line head to heels, 45 sec','Leg raises: flat on floor, raise legs to 90° slowly, lower without touching floor'],
+        tut:'Plank = pure isometric hold, breathe steadily. Leg raises: ⬆️ 1 sec → ⏸ 1 sec → ⬇️ 3 sec lower, pause 1 inch above floor. Core finisher after legs — your abs are already braced from heavy lifts.',
+        tip:'Core finisher on leg day — abs were already working to stabilize during squats and RDLs.' }
+    ]
+  },
+  { id:'arms', label:'DAY 5 — ARMS', color:'var(--arms)', badge:'ARMS', muscles:['Biceps (Long+Short Head)','Triceps (3 Heads)','Forearms'],
+    exercises:[
+      { name:'Barbell or EZ-Bar Curl', sets:4, reps:'10–12', weight:'Gym: EZ-bar · Home: 7.5–10 kg DB both arms',
+        how:['Stand tall, elbows pinned to sides','Curl up, squeeze at top','Lower fully for stretch','Strict form — no swinging'],
+        tut:'⬆️ 1 sec curl → ⏸ 1 sec squeeze → ⬇️ 3 sec lower. Main bicep mass builder — both heads of the bicep work together here.',
+        tip:'This is your bicep foundation movement — heaviest bicep exercise of the day.' },
+      { name:'Incline DB Curl', sets:3, reps:'10 each', weight:'Gym or Home: 5–7.5 kg DB, incline bench',
+        how:['Sit on incline bench, arms hang straight down behind body','Curl up slowly — long head stretch position','Squeeze at top','Lower to full hang'],
+        tut:'⬆️ 2 sec curl (stretched start makes this harder) → ⏸ 1 sec squeeze → ⬇️ 3 sec lower. Long head of bicep — this is THE peak-building exercise.',
+        tip:'The bicep "peak" everyone wants comes from this exercise specifically — the stretched position is key.' },
+      { name:'Cable Curl (Bar or Rope)', sets:3, reps:'12', weight:'Gym: Cable machine low pulley · Home: hammer curl 7.5–10 kg',
+        how:['Stand facing cable, low pulley','Curl bar/rope up, elbows pinned','Squeeze at top','Constant tension throughout — cable never goes slack'],
+        tut:'⬆️ 1 sec curl → ⏸ 1 sec squeeze → ⬇️ 3 sec lower. Cables provide tension even at the bottom of the curl — dumbbells lose tension at full extension. This fills in the gap.',
+        tip:'This hits the bicep through its full range better than dumbbells alone.' },
+      { name:'Close-Grip Bench Press', sets:4, reps:'10', weight:'Gym: Barbell, hands shoulder-width · Home: close-grip push-ups',
+        how:['Lie flat, grip narrower than shoulder width','Lower bar to lower chest, elbows close to body','Press up focusing on triceps','Don\'t flare elbows out'],
+        tut:'⬇️ 3 sec lower → ⏸ 1 sec at chest → ⬆️ 1 sec press. Heaviest tricep mass builder — uses more weight than any isolation exercise, builds the bulk of tricep size.',
+        tip:'This single exercise builds more tricep mass than any isolation movement — prioritize it.' },
+      { name:'Overhead Cable Tricep Extension', sets:3, reps:'12', weight:'Gym: Cable, rope attachment overhead · Home: 10 kg DB overhead extension',
+        how:['Face away from cable, rope behind head','Extend arms forward and down','Elbows close to head','Full stretch behind head, full lockout at front'],
+        tut:'⬇️ 3 sec lower behind head (stretch) → ⏸ 1 sec → ⬆️ 1 sec extend + squeeze. Long head of triceps — the "horseshoe" — repeated from chest day for double frequency.',
+        tip:'Long head = horseshoe shape. Train it twice a week for visible results.' },
+      { name:'Tricep Pushdown (Reverse Grip)', sets:3, reps:'12', weight:'Gym: Cable, underhand grip · Home: 5–7.5 kg DB kickback',
+        how:['Cable pushdown but palms facing UP (underhand)','Push down to full extension','Squeeze at bottom','This grip hits a different tricep angle'],
+        tut:'⬆️ 1 sec push down → ⏸ 1 sec squeeze → ⬇️ 2 sec return. The reverse grip targets the medial head — the third tricep head most people never isolate.',
+        tip:'Medial head — the third tricep head. This completes all 3 heads of the tricep in one workout.' },
+      { name:'Wrist Curl + Reverse Wrist Curl', sets:3, reps:'15 each', weight:'Gym or Home: 5 kg DB / 2.5–5 kg DB',
+        how:['Wrist curl: palms up, curl wrist up, lower fully','Reverse wrist curl: palms down, extend wrist up, lower fully','Forearms resting on bench or thighs'],
+        tut:'⬆️ 1 sec curl → ⏸ 1 sec → ⬇️ 2 sec lower for both. Forearms — grip strength visible in every handshake and every photo where you\'re holding something.',
+        tip:'Forearm development is what separates "big arms" from "complete arms".' }
+    ]
+  },
+  { id:'core', label:'DAY 6 — CORE+WEAK POINTS', color:'var(--core)', badge:'CORE', muscles:['Abs','Obliques','Lower Back','Calves','Rear Delts'],
+    exercises:[
+      { name:'Hanging Leg Raise (or Captain\'s Chair)', sets:4, reps:'12–15', weight:'Gym: Pull-up bar or captain\'s chair · Home: floor leg raises',
+        how:['Hang from bar, legs straight (or knees bent if needed)','Raise legs to 90° or higher','Lower with control — no swinging','Captain\'s chair: same motion supported on forearms'],
+        tut:'⬆️ 1 sec raise → ⏸ 1 sec hold → ⬇️ 3 sec lower (resist the swing). This is the #1 lower ab exercise in any gym — far superior to floor leg raises because gravity adds real resistance.',
+        tip:'This single exercise will reveal lower ab definition faster than anything else if diet is on point.' },
+      { name:'Cable Crunch', sets:4, reps:'15', weight:'Gym: Cable rope, kneeling, high pulley · Home: floor crunches with added pause',
+        how:['Kneel facing cable, rope behind head','Crunch down, bringing elbows toward knees','Squeeze abs hard at bottom','Return with control — keep tension on abs throughout'],
+        tut:'⬇️ 1 sec crunch down → ⏸ 1 sec squeeze hard → ⬆️ 2 sec return. Cable adds resistance that bodyweight ab exercises can\'t — this is how abs actually GROW, not just get toned.',
+        tip:'Most people do too many bodyweight ab reps with no resistance — this is how you actually build ab muscle.' },
+      { name:'Russian Twist (Weighted)', sets:3, reps:'20 (10 each side)', weight:'Gym: Plate or DB · Home: 5–7.5 kg DB',
+        how:['Sit, lean back 45°, feet off floor or flat','Hold weight at chest','Rotate torso side to side, touching weight near floor each side'],
+        tut:'1 sec per rotation — controlled rhythm, not slow. Obliques — the V-cut at the sides of the waist that makes the whole torso look tapered.',
+        tip:'Obliques create the visual taper from chest to waist — directly contributes to the "coach physique" look.' },
+      { name:'Standing Calf Raise (Heavy)', sets:4, reps:'15–20', weight:'Gym: Calf machine or Smith machine · Home: 12.5 kg DB',
+        how:['Rise onto toes fully','Squeeze and hold at top','Lower for full Achilles stretch','Never bounce'],
+        tut:'⬆️ 1 sec rise → ⏸ 2 sec hold → ⬇️ 2 sec stretch. Calves get a second session this week — stubborn muscle needs frequency.',
+        tip:'Second calf session of the week — frequency beats single heavy sessions for calves.' },
+      { name:'Face Pulls (Rear Delt — High Volume)', sets:4, reps:'15–20', weight:'Gym: Cable + rope · Home: band pull-aparts or reverse fly',
+        how:['Cable at face height, pull rope to face','Elbows flare wide, squeeze rear delts','High reps, lighter weight','Control the return'],
+        tut:'⬆️ 1 sec pull → ⏸ 1 sec squeeze → ⬇️ 2 sec return. THIRD time this week training rear delts — at this frequency the size difference becomes visible within weeks.',
+        tip:'Rear delts trained 3x this week (back day, shoulder day, core day) — this is how you build the "coach" 3D shoulder look fast.' },
+      { name:'Superman Hold', sets:3, reps:'20', weight:'Bodyweight',
+        how:['Face down, arms extended forward','Lift arms, chest, legs simultaneously','Squeeze glutes and lower back','Hold 2 sec per rep'],
+        tut:'⬆️ 1 sec lift → ⏸ 2 sec hold → ⬇️ 1 sec lower. Lower back health — protects every heavy lift you do all week.',
+        tip:'Insurance for your spine — protects all the heavy pressing and pulling from this week.' },
+      { name:'Farmer\'s Carry (Grip + Core)', sets:3, reps:'30–40 steps', weight:'Gym: Heaviest DBs available · Home: 12.5 kg DB each hand',
+        how:['Hold heaviest dumbbells you can in each hand','Walk slowly maintaining upright posture','Core braced throughout — don\'t lean to either side','Grip them as hard as possible'],
+        tut:'No tempo — this is about duration. Hold for 30-40 steps without dropping. Grip strength + core stability + traps all at once. This is a true "functional strength" finisher.',
+        tip:'Whole-body finisher — grip, core, traps, posture all challenged simultaneously. Great way to end the week.' }
+    ]
+  }
+];
+
+
+// ============================================================
+// INIT
+// ============================================================
+function initApp() {
+  updateDate();
+  updateStats();
+  updateHeaderUI();
+  updateDateNav();
+  renderTabs();
+  renderAllWorkouts();
+  renderSchedule();
+  selectDay(0);
+}
+
+function updateHeaderUI() {
+  const p = profile;
+  if (!p) return;
+  const icon = p.goalType === 'gain' ? '📈' : '📉';
+  document.getElementById('headerSub').textContent = p.name + ' · ' + icon + ' ' + p.startWeight + ' → ' + p.goalWeight + ' kg';
+  document.getElementById('btpTitle').textContent = p.name + '\'s BTP Progress';
+  const fill = document.getElementById('btpFill');
+  fill.className = 'btp-fill ' + p.goalType;
+  document.getElementById('btpStart').textContent = p.startWeight;
+  document.getElementById('btpGoal').textContent = p.goalWeight;
+  document.getElementById('statGoal').textContent = p.goalWeight;
+  const changedLabel = p.goalType === 'gain' ? 'Gained' : 'Lost';
+  document.getElementById('btpChangedLabel').textContent = changedLabel;
+  document.getElementById('statChangedLabel').textContent = changedLabel;
+  document.getElementById('weightInput').placeholder = String(p.startWeight);
+  // BTP countdown
+  const countdownEl = document.getElementById('btpCountdown');
+  if (countdownEl) {
+    const w = getLatestWeight();
+    const muscleTarget = 30.94;
+    const muscleStart = 21.88;
+    const muscleGained = Math.max(0, w - p.startWeight) * 0.6; // ~60% of weight gain is muscle for lean bulk
+    const musclePct = Math.min(100, ((muscleStart + muscleGained - muscleStart) / (muscleTarget - muscleStart)) * 100).toFixed(0);
+    const calTarget = 2300;
+    const calCurrent = 1761;
+    const calGap = calTarget - calCurrent;
+    countdownEl.innerHTML = `
+      <div class="btp-countdown-row">
+        <div class="btp-cd-item"><div class="btp-cd-val" style="color:var(--accent2)">${(muscleStart + muscleGained).toFixed(2)}</div><div class="btp-cd-label">Est. Muscle kg</div></div>
+        <div class="btp-cd-item"><div class="btp-cd-val" style="color:var(--accent)">${muscleTarget}</div><div class="btp-cd-label">Muscle Target</div></div>
+        <div class="btp-cd-item"><div class="btp-cd-val" style="color:var(--accent3)">${calCurrent}</div><div class="btp-cd-label">kcal/day</div></div>
+        <div class="btp-cd-item"><div class="btp-cd-val" style="color:var(--arms)">+${calGap}</div><div class="btp-cd-label">kcal needed</div></div>
+      </div>`;
+  }
+  renderBTP();
+}
+
+function updateDate() {
+  const now = new Date();
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('dateDisplay').innerHTML = `<span>${days[now.getDay()]}</span>, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+}
+
+function getLatestWeight() {
+  return weightHistory.length > 0 ? weightHistory[weightHistory.length-1].weight : profile.startWeight;
+}
+
+function updateStats() {
+  if (!profile) return;
+  const w = getLatestWeight();
+  const isGain = profile.goalType === 'gain';
+  const changed = isGain ? (w - profile.startWeight) : (profile.startWeight - w);
+  const toGo = Math.max(0, isGain ? profile.goalWeight - w : w - profile.goalWeight);
+  document.getElementById('statCurrent').textContent = w;
+  document.getElementById('statChanged').textContent = (changed >= 0 ? '+' : '') + changed.toFixed(1);
+  document.getElementById('statToGo').textContent = toGo.toFixed(1);
+  renderBTP();
+}
+
+function renderBTP() {
+  if (!profile) return;
+  const w = getLatestWeight();
+  const isGain = profile.goalType === 'gain';
+  const changed = isGain ? Math.max(0, w - profile.startWeight) : Math.max(0, profile.startWeight - w);
+  const total = Math.abs(profile.goalWeight - profile.startWeight);
+  const pct = total > 0 ? Math.min(100, (changed / total) * 100) : 0;
+  document.getElementById('btpFill').style.width = pct + '%';
+  document.getElementById('btpPct').textContent = pct.toFixed(1) + '% to goal';
+  document.getElementById('btpCurrent').textContent = w;
+  document.getElementById('btpChanged').textContent = (changed >= 0 ? '+' : '') + changed.toFixed(1);
+}
+
+function toggleNutrition() {
+  document.getElementById('nbBody').classList.toggle('open');
+  document.getElementById('nbArrow').classList.toggle('open');
+}
+
+function saveWeight() {
+  const val = parseFloat(document.getElementById('weightInput').value);
+  if (!val || val < 30 || val > 300) { showToast('Enter a valid weight'); return; }
+  weightHistory.push({ date: new Date().toISOString(), weight: val });
+  localStorage.setItem('piq_weight_history', JSON.stringify(weightHistory));
+  document.getElementById('weightInput').value = '';
+  updateStats();
+  updateHeaderUI();
+  if (currentNav === 'history') renderWeightHistory();
+  showToast('✅ ' + val + ' kg saved!');
+}
+
+function saveSteps() {
+  const val = parseInt(document.getElementById('stepsInput').value);
+  if (!val || val < 0) { showToast('Enter valid steps'); return; }
+  stepsHistory.push({ date: new Date().toISOString(), steps: val });
+  localStorage.setItem('piq_steps_history', JSON.stringify(stepsHistory));
+  document.getElementById('stepsInput').value = '';
+  if (currentNav === 'history') renderStepsHistory();
+  const pct = Math.min(100, (val / 10000) * 100).toFixed(0);
+  showToast(val >= 10000 ? '🎉 10K steps crushed!' : `🚶 ${val.toLocaleString()} steps (${pct}%)`);
+}
+
+// DATE NAVIGATION
+function shiftDate(delta) {
+  const d = new Date(activeDate + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  const newDate = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  // Don't go into the future beyond today
+  if (newDate > todayStr()) return;
+  activeDate = newDate;
+  updateDateNav();
+  renderAllWorkouts();
+  selectDay(currentDay);
+}
+
+function goToday() {
+  activeDate = todayStr();
+  updateDateNav();
+  renderAllWorkouts();
+  selectDay(currentDay);
+}
+
+function goLastSession() {
+  const allDates = [...new Set(Object.keys(setData).map(k=>k.split('_')[0]))].sort().reverse();
+  const today = todayStr();
+  const last = allDates.find(d => d < today);
+  if (last) {
+    activeDate = last;
+    updateDateNav();
+    renderAllWorkouts();
+    selectDay(currentDay);
+  }
+}
+
+function updateDateNav() {
+  const today = todayStr();
+  const d = new Date(activeDate + 'T00:00:00');
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const isToday = activeDate === today;
+
+  const label = isToday ? '📅 TODAY' : '📅 ' + days[d.getDay()];
+  const sub = d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+
+  document.getElementById('dateNavLabel').textContent = label;
+  document.getElementById('dateNavSub').textContent = sub;
+  document.getElementById('dateNavNext').style.opacity = isToday ? '0.3' : '1';
+  const todayBtn = document.getElementById('dateNavTodayBtn');
+  if (todayBtn) todayBtn.style.display = isToday ? 'none' : 'block';
+
+  // Teal color if past date has data
+  const hasData = Object.keys(setData).some(k => k.startsWith(activeDate + '_'));
+  document.getElementById('dateNavLabel').style.color = hasData && !isToday ? 'var(--accent2)' : 'var(--accent)';
+
+  // Show last session bar only on today and only if past data exists
+  const lastSessionBar = document.getElementById('lastSessionBar');
+  if (lastSessionBar) {
+    const allDates = [...new Set(Object.keys(setData).map(k=>k.split('_')[0]))].sort().reverse();
+    const lastDate = allDates.find(d => d < today);
+    if (isToday && lastDate) {
+      const ld = new Date(lastDate+'T00:00:00');
+      const ldStr = days[ld.getDay()]+', '+ld.getDate()+' '+months[ld.getMonth()];
+      document.getElementById('lastSessionDate').textContent = ldStr;
+      lastSessionBar.style.display = 'block';
+    } else {
+      lastSessionBar.style.display = 'none';
+    }
+  }
+}
+
+// TABS
+function renderTabs() {
+  const container = document.getElementById('dayTabs');
+  const tabDays = ['D1','D2','D3','D4','D5','D6','SUN'];
+  const tabLabels = ['CHEST','BACK','SHLDR','LEGS','ARMS','CORE','REST'];
+  const tabTypes = ['Chest+Tri','Lats·Bi','Delts·Traps','Quads·Ham','Bi·Tri·Fore','Abs+Weak','Walk+Stretch'];
+  const tabColors = ['var(--push)','var(--pull)','var(--legs)','var(--full)','var(--arms)','var(--core)','var(--muted)'];
+  container.innerHTML = tabDays.map((d,i) => `
+    <div class="day-tab${i===0?' active':''}${i===6?' rest-tab':''}" style="--tab-color:${tabColors[i]}" onclick="${i<6?'selectDay('+i+')':''}" id="tab${i}">
+      <div class="tab-day" style="color:${tabColors[i]}">${d}</div>
+      <div class="tab-label">${tabLabels[i]}</div>
+      <div class="tab-type">${tabTypes[i]}</div>
+    </div>`).join('');
+}
+
+function selectDay(idx) {
+  currentDay = idx;
+  document.querySelectorAll('.day-tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+  document.querySelectorAll('.workout-panel,.rest-card').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('panel'+idx);
+  if (panel) panel.classList.add('active');
+  if (idx < 6) checkComplete(idx);
+}
+
+function renderAllWorkouts() {
+  const container = document.getElementById('workoutContainer');
+  container.innerHTML = '';
+  WORKOUTS.forEach((day, di) => {
+    const panel = document.createElement('div');
+    panel.className = 'workout-panel' + (di===0?' active':'');
+    panel.id = 'panel'+di;
+    panel.style.setProperty('--day-color', day.color);
+    panel.innerHTML = buildWorkoutHTML(day, di);
+    container.appendChild(panel);
+  });
+  const rest = document.createElement('div');
+  rest.className = 'rest-card';
+  rest.id = 'panel6';
+  rest.innerHTML = `<div class="rest-emoji">😴</div><div class="rest-title">REST DAY</div><div class="rest-sub">No gym today.<br><strong>Still do your 10,000 steps.</strong><br>Walk, stretch, foam roll, sleep early.<br>Muscle grows today — not yesterday in the gym.</div>`;
+  container.appendChild(rest);
+}
+
+function buildWorkoutHTML(day, di) {
+  const banner = `<div class="complete-banner" id="completeBanner${di}"><div class="complete-emoji">🎉</div><div class="complete-text">Day ${di+1} Complete!</div><div class="complete-sub">All sets done. Take your Rebuild Strength now.</div></div>`;
+  const muscles = day.muscles.map(m=>`<span class="muscle-tag">${m}</span>`).join('');
+  const header = `<div class="day-header"><div class="day-badge" style="background:${day.color}">${day.badge}</div><div class="day-title">${day.label.split('—')[1]?.trim()||day.label}</div><div class="day-subtitle">${day.exercises.length} exercises · ${day.exercises.reduce((a,e)=>a+e.sets,0)} total sets</div><div class="day-muscles">${muscles}</div></div>`;
+  return banner + header + day.exercises.map((ex,ei)=>buildExCard(ex,di,ei,day.color)).join('');
+}
+
+function getLastSessionData(di, ei) {
+  // Find the most recent date before activeDate that has data for this exercise
+  const prefix = `_${di}_${ei}`;
+  const dates = Object.keys(setData)
+    .filter(k => k.endsWith(prefix) && k.split('_')[0] < activeDate)
+    .map(k => k.split('_')[0])
+    .sort().reverse();
+  if (!dates.length) return null;
+  return { date: dates[0], sets: setData[`${dates[0]}_${di}_${ei}`] };
+}
+
+function getYouTubeURL(name) {
+  const searches = {
+    'Barbell / Machine Bench Press': 'barbell bench press proper form tutorial',
+    'Incline Barbell / DB Press': 'incline bench press proper form tutorial',
+    'Cable / Dumbbell Chest Fly': 'cable chest fly proper form tutorial',
+    'Decline Push-ups or Decline Press': 'decline push ups lower chest tutorial',
+    'Cable Crossover (High to Low)': 'cable crossover chest exercise form',
+    'Tricep Pushdown (Cable)': 'cable tricep pushdown proper form',
+    'Overhead Rope Tricep Extension': 'cable overhead tricep extension form',
+    'Lat Pulldown (Wide Grip)': 'wide grip lat pulldown proper form',
+    'Seated Cable Row (or Barbell Row)': 'seated cable row proper form tutorial',
+    'Single-Arm Lat Pulldown / Row': 'single arm lat pulldown row form',
+    'Face Pulls (Cable)': 'face pulls cable rear delt tutorial',
+    'Straight Arm Pulldown (Cable)': 'straight arm pulldown lat exercise form',
+    'Barbell or DB Bicep Curl': 'barbell bicep curl proper form tutorial',
+    'Hyperextension (Back Extension)': 'hyperextension back extension form',
+    'Barbell or DB Overhead Press': 'barbell overhead press shoulder form',
+    'Cable or DB Lateral Raise': 'cable lateral raise side delt tutorial',
+    'Rear Delt Cable Fly / Reverse Pec Deck': 'reverse pec deck rear delt fly form',
+    'Front Raise (Plate or DB)': 'plate front raise shoulder exercise form',
+    'Barbell or DB Shrug': 'barbell shrug traps proper form',
+    'Arnold Press': 'arnold press shoulder exercise tutorial',
+    'Leg Press Machine': 'leg press machine proper form tutorial',
+    'Leg Extension Machine': 'leg extension machine quad form',
+    'Leg Curl Machine (Lying or Seated)': 'leg curl machine hamstring form',
+    'Walking Lunges (DB or Bodyweight)': 'walking lunges dumbbell proper form',
+    'Romanian Deadlift (Barbell or DB)': 'romanian deadlift barbell proper form',
+    'Calf Raise (Standing or Seated Machine)': 'calf raise machine proper form',
+    'Plank + Leg Raises (Core finisher)': 'plank leg raises core exercise form',
+    'Barbell or EZ-Bar Curl': 'ez bar bicep curl proper form tutorial',
+    'Incline DB Curl': 'incline dumbbell curl long head bicep',
+    'Cable Curl (Bar or Rope)': 'cable bicep curl proper form tutorial',
+    'Close-Grip Bench Press': 'close grip bench press tricep tutorial',
+    'Overhead Cable Tricep Extension': 'cable overhead tricep extension form',
+    'Tricep Pushdown (Reverse Grip)': 'reverse grip tricep pushdown form',
+    'Wrist Curl + Reverse Wrist Curl': 'wrist curl reverse wrist curl forearm form',
+    'Hanging Leg Raise (or Captain\'s Chair)': 'hanging leg raise abs tutorial',
+    'Cable Crunch': 'cable crunch abs proper form tutorial',
+    'Russian Twist (Weighted)': 'weighted russian twist oblique form',
+    'Standing Calf Raise (Heavy)': 'standing calf raise machine form',
+    'Face Pulls (Rear Delt — High Volume)': 'face pulls cable rear delt tutorial',
+    'Superman Hold': 'superman hold lower back exercise form',
+    'Farmer\'s Carry (Grip + Core)': 'farmers carry exercise proper form'
+  };
+  const query = searches[name] || (name + ' gym exercise proper form');
+  return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query);
+}
+
+// Exercises that need left bonus sets for symmetry fixing
+const LEFT_BONUS_EXERCISES = {
+  '1_2': { label:'Single-Arm Row — LEFT ONLY BONUS', sets:2 },     // Back Day, Single-Arm Lat Pulldown/Row
+  '2_1': { label:'Lateral Raise — LEFT ONLY BONUS', sets:2 },      // Shoulder Day, Cable/DB Lateral Raise
+  '1_5': { label:'Bicep Curl — LEFT ONLY BONUS', sets:1 },         // Back Day, Bicep Curl
+  '4_0': { label:'Bicep Curl — LEFT ONLY BONUS', sets:2 },         // Arms Day, Barbell/EZ Curl (do single-arm DB version for left)
+  '4_1': { label:'Incline Curl — LEFT ONLY BONUS', sets:2 },       // Arms Day, Incline DB Curl
+};
+
+function buildExCard(ex, di, ei, color) {
+  const key = `${activeDate}_${di}_${ei}`;
+  if (!setData[key]) setData[key] = Array.from({length:ex.sets},()=>({reps:'',weight:'',done:false}));
+  const data = setData[key];
+  const howHTML = ex.how.map(s=>`<li>${s}</li>`).join('');
+
+  // Last session reference
+  const last = getLastSessionData(di, ei);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let lastSessionHTML = '';
+  if (last && last.sets) {
+    const ld = new Date(last.date+'T00:00:00');
+    const ldStr = ld.getDate()+' '+months[ld.getMonth()];
+    const lastRows = last.sets.map((s,si) =>
+      `<span class="last-set-chip">${si+1}: ${s.reps||'—'} reps · ${s.weight||'—'} kg</span>`
+    ).join('');
+    lastSessionHTML = `
+      <div class="last-session-ref">
+        <div class="last-session-title">📋 Last Session (${ldStr})</div>
+        <div class="last-set-chips">${lastRows}</div>
+      </div>`;
+  }
+
+  const setRows = data.map((s,si)=>`
+    <div class="set-row" id="sr_${di}_${ei}_${si}">
+      <div class="set-label">${si+1}</div>
+      <input class="set-input" type="number" placeholder="${String(ex.reps).replace('–','-')}" value="${s.reps}" min="0" max="99" oninput="updateSet(${di},${ei},${si},'reps',this.value)" style="${s.done?'border-color:'+color:''}">
+      <input class="set-input" type="number" placeholder="kg" value="${s.weight}" step="0.5" min="0" max="50" oninput="updateSet(${di},${ei},${si},'weight',this.value)" style="${s.done?'border-color:'+color:''}">
+      <button class="set-done${s.done?' checked':''}" style="${s.done?'background:'+color+';border-color:'+color:''}" onclick="toggleDone(${di},${ei},${si})" id="sd_${di}_${ei}_${si}">✓</button>
+    </div>`).join('');
+
+  // Left bonus sets for symmetry
+  const bonusKey = `${di}_${ei}`;
+  const bonus = LEFT_BONUS_EXERCISES[bonusKey];
+  let leftBonusHTML = '';
+  if (bonus) {
+    const lKey = `${activeDate}_L_${di}_${ei}`;
+    if (!setData[lKey]) setData[lKey] = Array.from({length:bonus.sets},()=>({reps:'',weight:'',done:false}));
+    const lData = setData[lKey];
+    const lRows = lData.map((s,si)=>`
+      <div class="set-row" id="lsr_${di}_${ei}_${si}">
+        <div class="set-label" style="color:var(--accent2)">L${si+1}</div>
+        <input class="set-input" type="number" placeholder="reps" value="${s.reps}" min="0" max="99" oninput="updateLeftSet(${di},${ei},${si},'reps',this.value)" style="border-color:${s.done?'var(--accent2)':'rgba(77,255,195,0.3)'}">
+        <input class="set-input" type="number" placeholder="kg" value="${s.weight}" step="0.5" min="0" max="50" oninput="updateLeftSet(${di},${ei},${si},'weight',this.value)" style="border-color:${s.done?'var(--accent2)':'rgba(77,255,195,0.3)'}">
+        <button class="set-done${s.done?' checked':''}" style="${s.done?'background:var(--accent2);border-color:var(--accent2);color:#0d0f0e':''}" onclick="toggleLeftDone(${di},${ei},${si})" id="lsd_${di}_${ei}_${si}">✓</button>
+      </div>`).join('');
+    const lDone = lData.filter(s=>s.done).length;
+    leftBonusHTML = `
+      <div class="left-bonus-block">
+        <div class="left-bonus-title">💪 LEFT ARM BONUS — Symmetry Fix (${bonus.sets} extra sets)</div>
+        <div class="left-bonus-sub">Do LEFT arm only. Match same weight as right. This closes the size gap.</div>
+        <div class="set-col-headers"><div class="set-col-h">Set</div><div class="set-col-h">Reps Done</div><div class="set-col-h">Weight kg</div><div class="set-col-h">✓</div></div>
+        ${lRows}
+        <div style="font-size:10px;color:var(--accent2);margin-top:6px">${lDone}/${bonus.sets} left bonus sets done</div>
+      </div>`;
+  }
+
+  const done = data.filter(s=>s.done).length;
+  const pct = (done/ex.sets)*100;
+  const ytURL = getYouTubeURL(ex.name);
+
+  return `
+    <div class="exercise-card" id="ec_${di}_${ei}">
+      <div class="ex-progress"><div class="ex-progress-fill" id="ep_${di}_${ei}" style="width:${pct}%;background:${color}"></div></div>
+      <div class="ex-header" onclick="toggleEx(${di},${ei})">
+        <div>
+          <div class="ex-num">EXERCISE ${ei+1}${bonus?' · 💪 L-BONUS':''}</div>
+          <div class="ex-name">${ex.name}</div>
+          <div class="ex-meta">${ex.sets} sets × ${ex.reps} · ${ex.weight}${last?' · 📋 prev':''}</div>
+        </div>
+        <div class="ex-sets-badge" id="eb_${di}_${ei}">${done}/${ex.sets}</div>
+      </div>
+      <div class="ex-body" id="exb_${di}_${ei}">
+        <div class="ex-inner">
+          ${lastSessionHTML}
+          <div class="how-to">
+            <div class="how-to-title">How To Do It</div>
+            <ul class="how-to-steps">${howHTML}</ul>
+            <div class="tip-box"><strong>💡 Tip:</strong> ${ex.tip}</div>
+            ${ex.tut ? `<div class="tut-box"><div class="tut-box-title">⏱ TUT — Time Under Tension</div>${ex.tut}</div>` : ''}
+            <a href="${ytURL}" target="_blank" class="yt-btn">▶ Watch on YouTube</a>
+          </div>
+          <div class="set-tracker">
+            <div class="set-tracker-title">Track Your Sets</div>
+            <div class="set-col-headers"><div class="set-col-h">Set</div><div class="set-col-h">Reps Done</div><div class="set-col-h">Weight kg</div><div class="set-col-h">✓</div></div>
+            ${setRows}
+          </div>
+          ${leftBonusHTML}
+        </div>
+      </div>
+    </div>`;
+}
+
+function toggleEx(di, ei) {
+  const body = document.getElementById(`exb_${di}_${ei}`);
+  const open = body.classList.contains('open');
+  document.querySelectorAll(`#panel${di} .ex-body`).forEach(b=>b.classList.remove('open'));
+  if (!open) body.classList.add('open');
+}
+
+function updateLeftSet(di, ei, si, field, val) {
+  const key = `${activeDate}_L_${di}_${ei}`;
+  if (!setData[key]) setData[key] = Array.from({length:2},()=>({reps:'',weight:'',done:false}));
+  setData[key][si][field] = val;
+  localStorage.setItem('piq_set_data', JSON.stringify(setData));
+}
+
+function toggleLeftDone(di, ei, si) {
+  const key = `${activeDate}_L_${di}_${ei}`;
+  if (!setData[key]) setData[key] = Array.from({length:2},()=>({reps:'',weight:'',done:false}));
+  setData[key][si].done = !setData[key][si].done;
+  localStorage.setItem('piq_set_data', JSON.stringify(setData));
+  const done = setData[key][si].done;
+  const btn = document.getElementById(`lsd_${di}_${ei}_${si}`);
+  if (btn) {
+    btn.classList.toggle('checked', done);
+    btn.style.background = done ? 'var(--accent2)' : '';
+    btn.style.borderColor = done ? 'var(--accent2)' : '';
+    btn.style.color = done ? '#0d0f0e' : '';
+  }
+  const row = document.getElementById(`lsr_${di}_${ei}_${si}`);
+  if (row) row.querySelectorAll('.set-input').forEach(inp=>{inp.style.borderColor = done ? 'var(--accent2)' : 'rgba(77,255,195,0.3)';});
+  const bonusLabel = document.querySelector(`#ec_${di}_${ei} .left-bonus-block div:last-child`);
+  if (bonusLabel) {
+    const total = setData[key].length;
+    const doneCount = setData[key].filter(s=>s.done).length;
+    bonusLabel.textContent = `${doneCount}/${total} left bonus sets done`;
+  }
+}
+
+function updateSet(di, ei, si, field, val) {
+  const key = `${activeDate}_${di}_${ei}`;
+  if (!setData[key]) setData[key] = Array.from({length:WORKOUTS[di].exercises[ei].sets},()=>({reps:'',weight:'',done:false}));
+  setData[key][si][field] = val;
+  localStorage.setItem('piq_set_data', JSON.stringify(setData));
+}
+
+function toggleDone(di, ei, si) {
+  const key = `${activeDate}_${di}_${ei}`;
+  if (!setData[key]) setData[key] = Array.from({length:WORKOUTS[di].exercises[ei].sets},()=>({reps:'',weight:'',done:false}));
+  setData[key][si].done = !setData[key][si].done;
+  localStorage.setItem('piq_set_data', JSON.stringify(setData));
+  const done = setData[key][si].done;
+  const color = WORKOUTS[di].color;
+  const btn = document.getElementById(`sd_${di}_${ei}_${si}`);
+  btn.classList.toggle('checked', done);
+  btn.style.background = done ? color : '';
+  btn.style.borderColor = done ? color : '';
+  document.getElementById(`sr_${di}_${ei}_${si}`).querySelectorAll('.set-input').forEach(inp=>{inp.style.borderColor = done ? color : '';});
+  const doneSets = setData[key].filter(s=>s.done).length;
+  const total = WORKOUTS[di].exercises[ei].sets;
+  document.getElementById(`ep_${di}_${ei}`).style.width = (doneSets/total*100)+'%';
+  document.getElementById(`eb_${di}_${ei}`).textContent = `${doneSets}/${total}`;
+  checkComplete(di);
+}
+
+function checkComplete(di) {
+  if (di >= WORKOUTS.length) return;
+  const allDone = WORKOUTS[di].exercises.every((ex,ei)=>{
+    const key = `${activeDate}_${di}_${ei}`;
+    return setData[key] && setData[key].every(s=>s.done);
+  });
+  const banner = document.getElementById(`completeBanner${di}`);
+  if (banner) banner.classList.toggle('show', allDone);
+  if (allDone) showToast('🎉 Day '+(di+1)+' complete!');
+}
+
+// HISTORY
+function renderWeightHistory() {
+  const list = document.getElementById('weightHistoryList');
+  if (!weightHistory.length) { list.innerHTML=`<div class="empty-state"><div class="empty-emoji">📊</div>No weight logged yet.</div>`; return; }
+  list.innerHTML = [...weightHistory].reverse().map((e,i,arr)=>{
+    const prev = arr[i+1] ? arr[i+1].weight : profile.startWeight;
+    const isGain = profile.goalType === 'gain';
+    const diff = (e.weight - prev).toFixed(1);
+    const positive = isGain ? diff >= 0 : diff <= 0;
+    const cls = positive ? 'up' : 'down';
+    const d = new Date(e.date);
+    const ds = d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    const realIdx = weightHistory.length-1-i;
+    return `<div class="history-card">
+      <div class="hc-row">
+        <div><div class="hc-date">${ds}</div><div class="hc-weight">${e.weight}<span class="hc-unit"> kg</span></div>
+        <div class="hc-change ${cls}">${i===arr.length-1?'Starting weight':((diff>=0?'+':'')+diff+' kg from previous')}</div></div>
+        <button class="hc-del-btn" onclick="deleteWeight(${realIdx})">🗑</button>
+      </div></div>`;
+  }).join('');
+}
+
+function deleteWeight(idx) {
+  weightHistory.splice(idx,1);
+  localStorage.setItem('piq_weight_history', JSON.stringify(weightHistory));
+  updateStats(); renderWeightHistory(); showToast('Deleted');
+}
+
+function renderStepsHistory() {
+  const list = document.getElementById('stepsHistoryList');
+  if (!stepsHistory.length) { list.innerHTML=`<div class="empty-state"><div class="empty-emoji">🚶</div>No steps logged yet.</div>`; return; }
+  list.innerHTML = [...stepsHistory].reverse().map((e,i)=>{
+    const pct = Math.min(100,(e.steps/10000)*100);
+    const d = new Date(e.date);
+    const ds = d.toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short'});
+    const realIdx = stepsHistory.length-1-i;
+    return `<div class="steps-history-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div class="hc-date">${ds}</div><div class="steps-hc-val">${e.steps.toLocaleString()}</div>
+        <div class="steps-hc-label">steps · ${pct.toFixed(0)}% of 10k goal ${e.steps>=10000?'✅':''}</div></div>
+        <button class="hc-del-btn" onclick="deleteSteps(${realIdx})">🗑</button>
+      </div>
+      <div class="steps-hc-bar"><div class="steps-hc-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function deleteSteps(idx) {
+  stepsHistory.splice(idx,1);
+  localStorage.setItem('piq_steps_history', JSON.stringify(stepsHistory));
+  renderStepsHistory(); showToast('Deleted');
+}
+
+// SCHEDULE
+function renderSchedule() {
+  document.getElementById('scheduleCards').innerHTML = SCHEDULE_DATA.map(s=>`
+    <div class="schedule-card" style="--sc-color:${s.color}">
+      <div class="sc-dot" style="background:${s.color}"></div>
+      <div class="sc-day">${s.day}</div>
+      <div class="sc-info"><div class="sc-type" style="color:${s.color}">${s.type}</div><div class="sc-muscles">${s.muscles}</div></div>
+    </div>`).join('');
+}
+
+// NOTES
+function selectMood(btn) {
+  document.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedMood = btn.dataset.val;
+  const hints={'💀':'Absolutely destroyed — respect 🤙','🔥':'Strong session, big gains incoming!','✅':'Solid and steady — consistency wins','😐':'Average day — still showed up though','😴':'Low energy — check sleep and food'};
+  document.getElementById('moodHint').textContent = hints[selectedMood]||'';
+}
+
+function updateNotesTodayDate() {
+  const now = new Date();
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('notesTodayDate').textContent=`${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]}`;
+}
+
+function saveNote() {
+  const text = document.getElementById('noteText').value.trim();
+  const sleep = document.getElementById('noteSleep').value;
+  const checks = {};
+  Object.keys(CHECK_LABELS).forEach(id=>{ checks[id]=document.getElementById(id).checked; });
+  const checkedCount = Object.values(checks).filter(Boolean).length;
+  if (!text && checkedCount===0 && !selectedMood) { showToast('Add something to save!'); return; }
+  notesHistory.push({ date:new Date().toISOString(), text, sleep, mood:selectedMood, checks });
+  localStorage.setItem('piq_notes', JSON.stringify(notesHistory));
+  document.getElementById('noteText').value='';
+  document.getElementById('noteSleep').value='';
+  Object.keys(CHECK_LABELS).forEach(id=>{ document.getElementById(id).checked=false; });
+  document.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('moodHint').textContent='Tap to rate your session';
+  selectedMood='';
+  renderNotesList();
+  showToast('📝 Journal entry saved!');
+}
+
+function renderNotesList() {
+  const list = document.getElementById('notesList');
+  if (!notesHistory.length) { list.innerHTML=`<div class="empty-state"><div class="empty-emoji">📝</div>No journal entries yet.<br>Log your first day above.</div>`; return; }
+  list.innerHTML=[...notesHistory].reverse().map((e,i)=>{
+    const realIdx=notesHistory.length-1-i;
+    const d=new Date(e.date);
+    const ds=d.toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})+' · '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    const checkedItems=Object.entries(e.checks||{}).filter(([,v])=>v).map(([k])=>`<span class="note-check-tag">${CHECK_LABELS[k]}</span>`).join('');
+    const noteText=e.text?`<div class="note-text">${e.text.replace(/\n/g,'<br>')}</div>`:'';
+    const metaRow=(e.sleep||e.mood)?`<div class="note-meta-row">${e.sleep?`<div class="note-meta-tag">😴 Sleep: <span>${e.sleep}h</span></div>`:''} ${e.mood?`<div class="note-meta-tag">Session: <span>${e.mood}</span></div>`:''}</div>`:'';
+    return `<div class="note-card">
+      <div class="note-card-header">
+        <div><div class="note-card-date">${ds}</div></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${e.mood?`<div class="note-card-mood">${e.mood}</div>`:''}
+          <button class="note-card-del" onclick="deleteNote(${realIdx})">🗑</button>
+        </div>
+      </div>
+      ${checkedItems?`<div class="note-checks-row">${checkedItems}</div>`:''}
+      ${noteText}${metaRow}
+    </div>`;
+  }).join('');
+}
+
+function deleteNote(idx) {
+  notesHistory.splice(idx,1);
+  localStorage.setItem('piq_notes', JSON.stringify(notesHistory));
+  renderNotesList(); showToast('Entry deleted');
+}
+
+function renderWorkoutHistory() {
+  const list = document.getElementById('workoutHistoryList');
+  // Get all unique dates from setData keys
+  const dates = [...new Set(Object.keys(setData).map(k => k.split('_')[0]))].sort().reverse();
+  if (!dates.length) { list.innerHTML=`<div class="empty-state"><div class="empty-emoji">🏋️</div>No workout sessions logged yet.</div>`; return; }
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  list.innerHTML = dates.map(date => {
+    const d = new Date(date+'T00:00:00');
+    const dateStr = days[d.getDay()]+', '+d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear();
+    const isToday = date === todayStr();
+    // Count completed sets across all exercises for this date
+    const keys = Object.keys(setData).filter(k=>k.startsWith(date+'_'));
+    const totalSets = keys.reduce((a,k)=>a+setData[k].length,0);
+    const doneSets = keys.reduce((a,k)=>a+setData[k].filter(s=>s.done).length,0);
+    // Figure out which day type had data
+    const dayIndices = [...new Set(keys.map(k=>parseInt(k.split('_')[1])))];
+    const dayNames = dayIndices.map(i=>WORKOUTS[i]?WORKOUTS[i].badge:'').filter(Boolean).join(' + ');
+    return `<div class="history-card" style="cursor:pointer" onclick="jumpToDate('${date}')">
+      <div class="hc-row">
+        <div>
+          <div class="hc-date">${dateStr} ${isToday?'· TODAY':''}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--accent);line-height:1.2">${dayNames||'Session'}</div>
+          <div class="hc-change ${doneSets===totalSets&&totalSets>0?'up':''}">${doneSets}/${totalSets} sets completed ${doneSets===totalSets&&totalSets>0?'✅':''}</div>
+        </div>
+        <div style="font-size:11px;color:var(--accent2);text-align:right;padding-top:4px">View ›</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function jumpToDate(date) {
+  activeDate = date;
+  updateDateNav();
+  renderAllWorkouts();
+  selectDay(currentDay);
+  switchNav('workout');
+}
+
+// NAV
+function switchNav(nav) {
+  currentNav=nav;
+  ['Workout','History','Notes','Schedule'].forEach(n=>{
+    const el=document.getElementById('nav'+n);
+    if(el) el.classList.toggle('active', nav===n.toLowerCase());
+  });
+  document.getElementById('mainArea').style.display=nav==='workout'?'block':'none';
+  document.getElementById('historyPanel').classList.toggle('active', nav==='history');
+  document.getElementById('notesPanel').classList.toggle('active', nav==='notes');
+  document.getElementById('schedulePanel').classList.toggle('active', nav==='schedule');
+  if(nav==='history'){renderWeightHistory();renderStepsHistory();renderWorkoutHistory();}
+  if(nav==='notes'){renderNotesList();updateNotesTodayDate();}
+}
+
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// STARTUP
+window.addEventListener('DOMContentLoaded', () => {
+  // Force-correct goal to 70 if old profile has 67
+  if (profile && (profile.goalWeight === 67 || profile.goalWeight === 70)) {
+    profile.goalWeight = 64;
+    profile.btpEndDate = null;
+    profile.btpTotalDays = null;
+    localStorage.setItem('piq_profile', JSON.stringify(profile));
+  }
+  if (profile) {
+    document.getElementById('obOverlay').classList.add('hidden');
+    document.getElementById('appShell').style.display='block';
+    initApp();
+  }
+  // pre-fill onboarding for Manoj
+  document.getElementById('obName').value='Manoj';
+  document.getElementById('obCurrent').value='59.3';
+  document.getElementById('obGoal').value='64';
+  document.getElementById('obDays').value='';
+  selectGoalType('gain');
+});
+</script>
+</body>
+</html>

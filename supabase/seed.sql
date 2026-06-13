@@ -387,3 +387,25 @@ WHERE lower(name) IN (
 UPDATE public.workouts SET log_type = 'distance'
 WHERE lower(name) IN ('treadmill run', 'rowing machine', 'cycling')
   AND log_type <> 'distance';
+
+-- 5. Additional exercises (from Manoj tracker-2): Hyperextension, Cable Crunch
+INSERT INTO public.workouts (name, description, youtube_url)
+SELECT v.name, v.description, v.url
+FROM (VALUES
+  ('Hyperextension (Back Extension)', 'Hinge forward over a back-extension bench, then raise your torso until it is in line with your legs, squeezing the lower back and glutes at the top. Builds the posterior chain and bulletproofs the lower back for heavy hinges.', 'https://www.youtube.com/watch?v=CgbmrF-DRSE'),
+  ('Cable Crunch', 'Kneel facing a high cable holding the rope beside your head, then crunch down by contracting the abs against the load — hips stay fixed, only the spine flexes. A weighted ab builder you can progressively overload.', 'https://www.youtube.com/watch?v=809A_MuZ2PY')
+) AS v(name, description, url)
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.workouts w WHERE lower(w.name) = lower(v.name)
+);
+
+INSERT INTO public.workout_tags (workout_id, tag_id)
+SELECT w.id, t.id
+FROM (VALUES
+  ('Hyperextension (Back Extension)', 'back'),
+  ('Hyperextension (Back Extension)', 'glutes'),
+  ('Cable Crunch', 'core')
+) AS m(workout_name, tag_name)
+JOIN public.workouts w ON lower(w.name) = lower(m.workout_name)
+JOIN public.tags t ON t.name = m.tag_name
+ON CONFLICT (workout_id, tag_id) DO NOTHING;

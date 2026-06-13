@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Dumbbell, Play, Plus } from "lucide-react";
+import { ArrowLeft, Dumbbell, Play, Plus, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkoutImageCarousel } from "./workout-image-carousel";
+import { WorkoutStatsPanel } from "./workout-stats-panel";
 import { LogWorkoutDialog } from "../../_components/log-workout-dialog";
 import type { WorkoutWithTags } from "@/lib/types";
+import type { WorkoutStats } from "./types";
 
 function getYouTubeEmbedUrl(url: string): string | null {
   try {
@@ -29,9 +31,10 @@ function getYouTubeEmbedUrl(url: string): string | null {
 
 interface WorkoutDetailProps {
   workout: WorkoutWithTags;
+  stats: WorkoutStats | null;
 }
 
-export function WorkoutDetail({ workout }: WorkoutDetailProps) {
+export function WorkoutDetail({ workout, stats }: WorkoutDetailProps) {
   const [logOpen, setLogOpen] = useState(false);
   const embedUrl = workout.youtube_url
     ? getYouTubeEmbedUrl(workout.youtube_url)
@@ -41,58 +44,30 @@ export function WorkoutDetail({ workout }: WorkoutDetailProps) {
   return (
     <div className="space-y-6">
       {/* Back nav */}
-      <div
-        className="animate-in fade-in slide-in-from-bottom-4 fill-mode-both"
-        style={{ animationDuration: "400ms" }}
-      >
-        <Button variant="ghost" size="sm" asChild className="-ml-2">
-          <Link href="/workouts">
-            <ArrowLeft className="mr-1.5 h-4 w-4" />
-            Back to Workouts
-          </Link>
-        </Button>
-      </div>
+      <Button variant="ghost" size="sm" asChild className="-ml-2">
+        <Link href="/workouts">
+          <ArrowLeft className="mr-1.5 h-4 w-4" />
+          Back to Workouts
+        </Link>
+      </Button>
 
-      {/* Hero section */}
-      <div
-        className="animate-in fade-in slide-in-from-bottom-4 fill-mode-both"
-        style={{ animationDuration: "500ms", animationDelay: "100ms" }}
-      >
-        {hasImages ? (
-          <WorkoutImageCarousel images={workout.workout_images ?? []} />
-        ) : (
-          <div className="flex h-48 items-center justify-center rounded-lg bg-gradient-to-br from-primary/5 to-primary/10">
-            <Dumbbell className="h-16 w-16 text-primary/20" />
-          </div>
-        )}
-      </div>
-
-      {/* Title + tags + CTA */}
-      <div
-        className="space-y-4 animate-in fade-in slide-in-from-bottom-4 fill-mode-both"
-        style={{ animationDuration: "500ms", animationDelay: "200ms" }}
-      >
-        <h1 className="text-3xl font-bold">{workout.name}</h1>
-
-        {workout.workout_tags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {workout.workout_tags.map((wt) => (
-              <Badge key={wt.tag_id} variant="secondary">
-                {wt.tags.name}
-              </Badge>
-            ))}
-          </div>
-        )}
-
-        {workout.description && (
-          <p className="text-muted-foreground leading-relaxed">
-            {workout.description}
-          </p>
-        )}
-
+      {/* Title row */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold sm:text-3xl">{workout.name}</h1>
+          {workout.workout_tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {workout.workout_tags.map((wt) => (
+                <Badge key={wt.tag_id} variant="secondary">
+                  {wt.tags.name}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
         <Button
           size="lg"
-          className="w-full sm:w-auto"
+          className="w-full shrink-0 sm:w-auto"
           onClick={() => setLogOpen(true)}
         >
           <Plus className="mr-1.5 h-4 w-4" />
@@ -100,33 +75,63 @@ export function WorkoutDetail({ workout }: WorkoutDetailProps) {
         </Button>
       </div>
 
-      {/* YouTube video */}
-      {embedUrl && (
-        <Card
-          className="overflow-hidden animate-in fade-in slide-in-from-bottom-4 fill-mode-both"
-          style={{ animationDuration: "500ms", animationDelay: "300ms" }}
-        >
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10">
-                <Play className="h-4 w-4 text-red-500" />
-              </div>
-              How to Perform
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="relative aspect-video overflow-hidden rounded-lg">
-              <iframe
-                src={embedUrl}
-                title={`${workout.name} tutorial`}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="absolute inset-0 h-full w-full"
-              />
+      {/* Two-column: media + how-to on the left, stats on the right (desktop) */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          {/* Video (constrained to a comfortable size, not full-bleed) */}
+          {embedUrl ? (
+            <Card className="overflow-hidden">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-500/10">
+                    <Play className="h-3.5 w-3.5 text-red-500" />
+                  </span>
+                  How to Perform
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
+                  <iframe
+                    src={embedUrl}
+                    title={`${workout.name} tutorial`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="absolute inset-0 h-full w-full"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          ) : hasImages ? (
+            <WorkoutImageCarousel images={workout.workout_images ?? []} />
+          ) : (
+            <div className="flex h-48 items-center justify-center rounded-lg bg-gradient-to-br from-primary/5 to-primary/10">
+              <Dumbbell className="h-16 w-16 text-primary/20" />
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+
+          {/* Description / instructions */}
+          {workout.description && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Info className="h-4 w-4 text-primary" />
+                  About this exercise
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="leading-relaxed text-muted-foreground">
+                  {workout.description}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Stats sidebar */}
+        <div className="lg:col-span-1">
+          <WorkoutStatsPanel logType={workout.log_type} stats={stats} />
+        </div>
+      </div>
 
       <LogWorkoutDialog
         workout={workout}
