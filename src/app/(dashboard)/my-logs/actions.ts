@@ -15,7 +15,7 @@ export async function fetchAllLogsForExport(filters?: {
 
   let query = supabase
     .from("workout_logs")
-    .select("performed_at, notes, workouts(name), workout_sets(set_number, reps, weight_kg)")
+    .select("performed_at, notes, workouts(name), workout_sets(set_number, reps, weight_kg, duration_seconds, distance_m)")
     .eq("user_id", user.id)
     .order("performed_at", { ascending: false });
 

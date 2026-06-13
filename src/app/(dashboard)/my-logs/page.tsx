@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import {
   getPartnersWithPermissions,
   resolvePartnerView,
 } from "@/lib/data/partners";
 import { LogList } from "./_components/log-list";
+import { LogsSummary, LogsSummarySkeleton } from "./_components/logs-summary";
 import { PartnerSwitcher } from "../_components/partner-switcher";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ShieldAlert, Users } from "lucide-react";
@@ -76,7 +78,7 @@ export default async function MyLogsPage({
   let query = supabase
     .from("workout_logs")
     .select(
-      "*, workouts(name), workout_sets(id, set_number, reps, weight_kg)",
+      "*, workouts(name, log_type, default_sets, default_reps, workout_tags(tags(name))), workout_sets(id, set_number, reps, weight_kg, duration_seconds, distance_m)",
       { count: "exact" }
     )
     .eq("user_id", viewingUserId)
@@ -120,6 +122,9 @@ export default async function MyLogsPage({
           </AlertDescription>
         </Alert>
       )}
+      <Suspense fallback={<LogsSummarySkeleton />}>
+        <LogsSummary userId={viewingUserId} />
+      </Suspense>
       <LogList
         logs={logs ?? []}
         readOnly={isViewingPartner}
