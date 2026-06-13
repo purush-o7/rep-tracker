@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { WorkoutCatalog } from "./_components/workout-catalog";
+import type { WorkoutCardStats } from "./_components/workout-card";
 import {
   parsePaginationParams,
   toRange,
@@ -70,6 +71,40 @@ export default async function WorkoutsPage({
       .map(({ id, full_name }) => ({ id, full_name }));
   }
 
+  // Per-exercise stats for the user, for the workouts visible on this page
+  const workouts = workoutsRes.data ?? [];
+  const visibleIds = workouts.map((w) => w.id);
+  const statsByWorkout: Record<string, WorkoutCardStats> = {};
+
+  if (visibleIds.length > 0) {
+    const { data: logs } = await supabase
+      .from("workout_logs")
+      .select(
+        "workout_id, performed_at, workout_sets(weight_kg, duration_seconds, distance_m)"
+      )
+      .eq("user_id", userId)
+      .in("workout_id", visibleIds)
+      .order("performed_at", { ascending: false });
+
+    for (const log of logs ?? []) {
+      const s = (statsByWorkout[log.workout_id] ??= {
+        sessions: 0,
+        lastPerformed: null,
+        bestWeight: 0,
+        bestDuration: 0,
+        bestDistance: 0,
+      });
+      s.sessions += 1;
+      // logs are newest-first, so the first one seen is the latest
+      if (!s.lastPerformed) s.lastPerformed = log.performed_at;
+      for (const set of log.workout_sets) {
+        s.bestWeight = Math.max(s.bestWeight, Number(set.weight_kg) || 0);
+        s.bestDuration = Math.max(s.bestDuration, set.duration_seconds ?? 0);
+        s.bestDistance = Math.max(s.bestDistance, set.distance_m ?? 0);
+      }
+    }
+  }
+
   const totalCount = workoutsRes.count ?? 0;
   const totalPages = getTotalPages(totalCount, pagination.pageSize);
   const currentPage = clampPage(pagination.page, totalPages);
@@ -78,9 +113,10 @@ export default async function WorkoutsPage({
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Workouts</h1>
       <WorkoutCatalog
-        workouts={workoutsRes.data ?? []}
+        workouts={workouts}
         tags={tagsRes.data ?? []}
         partners={partners}
+        statsByWorkout={statsByWorkout}
         initialSearch={params.q ?? ""}
         currentPage={currentPage}
         pageSize={pagination.pageSize}

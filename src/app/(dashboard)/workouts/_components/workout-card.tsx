@@ -3,22 +3,36 @@
 import { useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Dumbbell, Youtube, Plus, CalendarPlus, Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
 import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Dumbbell,
+  Youtube,
+  Plus,
+  CalendarPlus,
+  Loader2,
+  Trophy,
+  Timer,
+  MapPin,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { MuscleTags } from "@/components/muscle-tags";
 import { addWorkoutToPlan } from "@/app/(dashboard)/today/actions";
+import { formatDuration, formatDistance } from "@/lib/set-entry";
 import type { WorkoutWithTags } from "@/lib/types";
+
+export interface WorkoutCardStats {
+  sessions: number;
+  lastPerformed: string | null;
+  bestWeight: number;
+  bestDuration: number;
+  bestDistance: number;
+}
 
 interface WorkoutCardProps {
   workout: WorkoutWithTags;
+  stats?: WorkoutCardStats;
   onLog: () => void;
 }
 
@@ -29,37 +43,51 @@ function getYoutubeThumbnail(url: string): string | null {
   return match ? `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg` : null;
 }
 
-export function WorkoutCard({ workout, onLog }: WorkoutCardProps) {
+export function WorkoutCard({ workout, stats, onLog }: WorkoutCardProps) {
   const [isAdding, startAdding] = useTransition();
 
   const handleAddToToday = () => {
     startAdding(async () => {
       const result = await addWorkoutToPlan(workout.id);
-      if (result.error) {
-        toast.error(result.error);
-      } else if (result.data) {
-        toast.success(`${workout.name} added to today`);
-      } else {
-        toast.info(`${workout.name} is already in today's plan`);
-      }
+      if (result.error) toast.error(result.error);
+      else if (result.data) toast.success(`${workout.name} added to today`);
+      else toast.info(`${workout.name} is already in today's plan`);
     });
   };
 
   const youtubeThumbnail = workout.youtube_url
     ? getYoutubeThumbnail(workout.youtube_url)
     : null;
-
   const imageUrl = youtubeThumbnail
     ? null
     : workout.workout_images?.[0]
       ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/workout-images/${workout.workout_images[0].storage_path}`
       : null;
-
   const displayImage = youtubeThumbnail ?? imageUrl;
 
+  // Personal best, formatted per log type
+  let bestLabel: string | null = null;
+  let BestIcon = Trophy;
+  if (stats && stats.sessions > 0) {
+    if (workout.log_type === "duration" && stats.bestDuration > 0) {
+      bestLabel = formatDuration(stats.bestDuration);
+      BestIcon = Timer;
+    } else if (workout.log_type === "distance" && stats.bestDistance > 0) {
+      bestLabel = formatDistance(stats.bestDistance);
+      BestIcon = MapPin;
+    } else if (stats.bestWeight > 0) {
+      bestLabel = `${stats.bestWeight} kg`;
+      BestIcon = Trophy;
+    }
+  }
+
   return (
-    <Card className="flex flex-col transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
-      <div className="relative aspect-video overflow-hidden rounded-t-lg">
+    <Card className="flex flex-row overflow-hidden p-0 transition-all duration-200 hover:shadow-md">
+      {/* Thumbnail */}
+      <Link
+        href={`/workouts/${workout.id}`}
+        className="relative w-24 shrink-0 self-stretch sm:w-28"
+      >
         {displayImage ? (
           <>
             <Image
@@ -67,68 +95,87 @@ export function WorkoutCard({ workout, onLog }: WorkoutCardProps) {
               alt={workout.name}
               fill
               className="object-cover"
+              sizes="112px"
               {...(youtubeThumbnail ? { unoptimized: true } : {})}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
             {youtubeThumbnail && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600/90">
-                  <Youtube className="h-5 w-5 text-white" />
-                </div>
-              </div>
+              <span className="absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-600/90">
+                <Youtube className="h-3.5 w-3.5 text-white" />
+              </span>
             )}
           </>
         ) : (
           <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10">
-            <Dumbbell className="h-12 w-12 text-primary/30" />
+            <Dumbbell className="h-8 w-8 text-primary/30" />
           </div>
         )}
-      </div>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg">
-          <Link
-            href={`/workouts/${workout.id}`}
-            className="hover:underline"
-          >
-            {workout.name}
-          </Link>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 space-y-2 pb-2">
-        <div className="flex flex-wrap gap-1">
-          {workout.workout_tags.map((wt) => (
-            <Badge key={wt.tag_id} variant="secondary" className="text-xs">
-              {wt.tags.name}
-            </Badge>
-          ))}
-        </div>
-        {workout.youtube_url && (
-          <div className="flex items-center gap-1 text-xs text-red-500">
-            <Youtube className="h-3.5 w-3.5" />
-            <span>Video tutorial</span>
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="gap-2">
-        <Button className="flex-1" onClick={onLog}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          Log Workout
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={handleAddToToday}
-          disabled={isAdding}
-          aria-label="Add to today's plan"
-          title="Add to today's plan"
+      </Link>
+
+      {/* Content */}
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
+        <Link
+          href={`/workouts/${workout.id}`}
+          className="truncate font-semibold leading-tight hover:underline"
         >
-          {isAdding ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+          {workout.name}
+        </Link>
+
+        {workout.description && (
+          <p className="truncate text-xs text-muted-foreground">
+            {workout.description}
+          </p>
+        )}
+
+        <MuscleTags tags={workout.workout_tags} max={3} />
+
+        {/* Personal stats line */}
+        <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+          {stats && stats.sessions > 0 ? (
+            <>
+              <span className="font-medium text-foreground">
+                {stats.sessions}×
+              </span>
+              {bestLabel && (
+                <span className="inline-flex items-center gap-1">
+                  <BestIcon className="h-3 w-3 text-amber-500" />
+                  {bestLabel}
+                </span>
+              )}
+              {stats.lastPerformed && (
+                <span className="truncate">
+                  · {format(new Date(stats.lastPerformed), "MMM d")}
+                </span>
+              )}
+            </>
           ) : (
-            <CalendarPlus className="h-4 w-4" />
+            <span className="italic">Not logged yet</span>
           )}
-        </Button>
-      </CardFooter>
+        </div>
+
+        {/* Actions */}
+        <div className="mt-auto flex gap-2 pt-1.5">
+          <Button size="sm" className="flex-1" onClick={onLog}>
+            <Plus className="mr-1 h-3.5 w-3.5" />
+            Log
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={handleAddToToday}
+            disabled={isAdding}
+            aria-label="Add to today's plan"
+            title="Add to today's plan"
+          >
+            {isAdding ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CalendarPlus className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      </div>
     </Card>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Dumbbell } from "lucide-react";
-import { WorkoutCard } from "./workout-card";
+import { WorkoutCard, type WorkoutCardStats } from "./workout-card";
 import { WorkoutSearch } from "./workout-search";
 import { LogWorkoutDialog } from "./log-workout-dialog";
 import { DataPagination } from "@/components/data-pagination";
@@ -12,6 +12,7 @@ interface WorkoutCatalogProps {
   workouts: WorkoutWithTags[];
   tags: Tag[];
   partners?: { id: string; full_name: string | null }[];
+  statsByWorkout?: Record<string, WorkoutCardStats>;
   initialSearch: string;
   currentPage: number;
   pageSize: number;
@@ -23,6 +24,7 @@ export function WorkoutCatalog({
   workouts,
   tags,
   partners,
+  statsByWorkout,
   initialSearch,
   currentPage,
   pageSize,
@@ -55,11 +57,12 @@ export function WorkoutCatalog({
           <p className="text-sm">Try adjusting your search or filters</p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           {filtered.map((workout) => (
             <WorkoutCard
               key={workout.id}
               workout={workout}
+              stats={statsByWorkout?.[workout.id]}
               onLog={() => setLogWorkout(workout)}
             />
           ))}
