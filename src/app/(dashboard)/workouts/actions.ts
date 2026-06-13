@@ -140,6 +140,7 @@ export async function updateLog(data: {
   log_id: string;
   notes?: string;
   sets: WorkoutSetInput[];
+  for_user_id?: string;
 }) {
   const supabase = await createClient();
   const {
@@ -148,12 +149,38 @@ export async function updateLog(data: {
 
   if (!user) return { error: "Not authenticated" };
 
-  // Verify ownership
+  const targetUserId = data.for_user_id ?? user.id;
+
+  // Editing for a partner: verify accepted partnership + edit permission
+  if (targetUserId !== user.id) {
+    const { data: partnership } = await supabase
+      .from("workout_partners")
+      .select("id")
+      .eq("status", "accepted")
+      .or(
+        `and(requester_id.eq.${user.id},addressee_id.eq.${targetUserId}),and(addressee_id.eq.${user.id},requester_id.eq.${targetUserId})`
+      )
+      .maybeSingle();
+
+    if (!partnership) return { error: "Not a valid partner" };
+
+    const { data: targetProfile } = await supabase
+      .from("profiles")
+      .select("partner_can_edit_logs")
+      .eq("id", targetUserId)
+      .single();
+
+    if (!targetProfile?.partner_can_edit_logs) {
+      return { error: "This partner does not allow others to edit their logs" };
+    }
+  }
+
+  // Verify the log belongs to the target user, and capture its workout
   const { data: log } = await supabase
     .from("workout_logs")
-    .select("id")
+    .select("id, workout_id")
     .eq("id", data.log_id)
-    .eq("user_id", user.id)
+    .eq("user_id", targetUserId)
     .single();
 
   if (!log) return { error: "Log not found" };
@@ -180,12 +207,22 @@ export async function updateLog(data: {
 
   if (setsError) return { error: setsError.message };
 
-  await recalculateStreak(supabase, user.id);
+  await recalculateStreak(supabase, targetUserId);
+
+  // Re-evaluate PR after the edit
+  const pr = await checkAndFlagPr(
+    supabase,
+    targetUserId,
+    log.workout_id,
+    data.log_id,
+    data.sets
+  );
 
   revalidatePath("/my-logs");
+  revalidatePath("/today");
   revalidatePath("/dashboard");
   revalidatePath("/reports");
-  return { data: true };
+  return { data: true, pr };
 }
 
 export async function getWorkoutPref(workoutId: string) {

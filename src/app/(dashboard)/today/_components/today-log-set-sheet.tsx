@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Dumbbell, Plus, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ResponsiveSheetDrawer } from "@/components/responsive-sheet-drawer";
@@ -13,6 +13,8 @@ import { PlateCalculator } from "@/components/plate-calculator";
 import { EquipmentNote } from "@/components/equipment-note";
 import { SchemeTag } from "@/components/scheme-tag";
 import { logWorkoutFromPlan } from "../actions";
+import { updateLog } from "@/app/(dashboard)/workouts/actions";
+import { createClient } from "@/lib/supabase/client";
 import { vibrate } from "@/lib/utils";
 import {
   emptySet,
@@ -51,73 +53,129 @@ export function TodayLogSetSheet({
   const [sets, setSets] = useState<SetEntry[]>([emptySet()]);
   const [notes, setNotes] = useState("");
   const queryClient = useQueryClient();
+  const supabase = createClient();
 
   const planKey = ["today-plan", viewingUserId];
   const logType = item?.workouts.log_type ?? "weight_reps";
 
-  // Prefill from routine targets each time a new item is opened
-  // (state adjustment during render — see react.dev "You Might Not Need an Effect")
+  // Editing an already-logged item (no terminal "done" state — always editable)
+  const editingLogId =
+    open &&
+    item?.is_completed &&
+    item.workout_log_id &&
+    item.workout_log_id !== "optimistic-id"
+      ? item.workout_log_id
+      : null;
+  const isEditing = !!editingLogId;
+
+  // Load the existing log when editing, to prefill the form
+  const { data: existingLog } = useQuery({
+    queryKey: ["log-detail", editingLogId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("workout_logs")
+        .select(
+          "notes, workout_sets(set_number, reps, weight_kg, duration_seconds, distance_m)"
+        )
+        .eq("id", editingLogId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!editingLogId,
+  });
+
+  // Prefill on open (state adjustment during render — react.dev "You Might Not Need an Effect").
+  // When editing, wait until the existing log has loaded before prefilling.
+  const prefillToken =
+    !open || !item
+      ? null
+      : isEditing
+        ? existingLog
+          ? `edit:${editingLogId}`
+          : null
+        : `new:${item.id}`;
   const [prefillKey, setPrefillKey] = useState<string | null>(null);
-  const openKey = open ? (item?.id ?? null) : null;
-  if (openKey !== prefillKey) {
-    setPrefillKey(openKey);
-    if (openKey) {
+  if (prefillToken && prefillToken !== prefillKey) {
+    setPrefillKey(prefillToken);
+    if (isEditing && existingLog) {
+      const loaded = [...existingLog.workout_sets].sort(
+        (a, b) => a.set_number - b.set_number
+      );
+      setSets(loaded.length ? loaded.map(fromLoggedSet) : [emptySet()]);
+      setNotes(existingLog.notes ?? "");
+    } else {
       setSets(logType === "weight_reps" ? setsFromTargets(targets) : [emptySet()]);
+      setNotes("");
     }
   }
 
-  const logMutation = useMutation({
-    mutationFn: (data: Parameters<typeof logWorkoutFromPlan>[0]) => logWorkoutFromPlan(data),
-    onMutate: async (newLog) => {
-      await queryClient.cancelQueries({ queryKey: planKey });
-      const previousPlan = queryClient.getQueryData<DailyPlanItemWithWorkout[]>(planKey);
-      queryClient.setQueryData<DailyPlanItemWithWorkout[]>(planKey, (old) => {
-        if (!old) return [];
-        return old.map((item) => {
-          if (item.id === newLog.plan_item_id) {
-            return {
-              ...item,
-              is_completed: true,
-              workout_log_id: "optimistic-id", // Placeholder
-            };
-          }
-          return item;
+  const prClause = (pr: { type: string; value: number; previous: number }) =>
+    pr.type === "weight"
+      ? `🏆 New PR! ${pr.value} kg (was ${pr.previous} kg)`
+      : `🏆 Rep PR! ${pr.value} reps at top weight (was ${pr.previous})`;
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const validSets = toSetInputs(sets, logType);
+      if (isEditing) {
+        return updateLog({
+          log_id: editingLogId!,
+          notes: notes || undefined,
+          sets: validSets,
+          for_user_id: forUserId,
         });
+      }
+      return logWorkoutFromPlan({
+        plan_item_id: item!.id,
+        workout_id: item!.workout_id,
+        notes: notes || undefined,
+        sets: validSets,
+        for_user_id: forUserId,
       });
+    },
+    onMutate: async () => {
+      // Optimistically mark complete only when logging fresh
+      if (isEditing) return { previousPlan: undefined };
+      await queryClient.cancelQueries({ queryKey: planKey });
+      const previousPlan =
+        queryClient.getQueryData<DailyPlanItemWithWorkout[]>(planKey);
+      queryClient.setQueryData<DailyPlanItemWithWorkout[]>(planKey, (old) =>
+        (old ?? []).map((p) =>
+          p.id === item?.id
+            ? { ...p, is_completed: true, workout_log_id: "optimistic-id" }
+            : p
+        )
+      );
       return { previousPlan };
     },
-    onError: (err, newLog, context) => {
+    onError: (err, _vars, context) => {
       if (context?.previousPlan) {
         queryClient.setQueryData(planKey, context.previousPlan);
       }
-      toast.error("Failed to save sets. Please try again.");
+      toast.error("Failed to save. Please try again.");
     },
     onSuccess: (result) => {
-      if (result.error) {
+      if (result?.error) {
         toast.error(result.error);
-      } else {
-        vibrate(50);
-        if ("pr" in result && result.pr) {
-          vibrate([50, 50, 100]);
-          toast.success(
-            result.pr.type === "weight"
-              ? `🏆 New PR! ${result.pr.value} kg (was ${result.pr.previous} kg)`
-              : `🏆 Rep PR! ${result.pr.value} reps at top weight (was ${result.pr.previous})`,
-            { duration: 6000 }
-          );
-        } else {
-          toast.success("Sets logged!");
-        }
-        onOpenChange(false);
-        setSets([emptySet()]);
-        setNotes("");
+        return;
       }
+      vibrate(50);
+      if (result && "pr" in result && result.pr) {
+        vibrate([50, 50, 100]);
+        toast.success(prClause(result.pr), { duration: 6000 });
+      } else {
+        toast.success(isEditing ? "Log updated!" : "Sets logged!");
+      }
+      onOpenChange(false);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: planKey });
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
       queryClient.invalidateQueries({ queryKey: ["streaks"] });
       queryClient.invalidateQueries({ queryKey: ["last-session", item?.workout_id] });
+      if (editingLogId)
+        queryClient.invalidateQueries({ queryKey: ["log-detail", editingLogId] });
     },
   });
 
@@ -134,26 +192,18 @@ export function TodayLogSetSheet({
 
   const handleSubmit = () => {
     if (!item) return;
-
-    const validSets = toSetInputs(sets, logType);
-    if (validSets.length === 0) {
+    if (toSetInputs(sets, logType).length === 0) {
       toast.error("Add at least one completed set");
       return;
     }
-
-    logMutation.mutate({
-      plan_item_id: item.id,
-      workout_id: item.workout_id,
-      notes: notes || undefined,
-      sets: validSets,
-      for_user_id: forUserId,
-    });
+    saveMutation.mutate();
   };
 
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       setSets([emptySet()]);
       setNotes("");
+      setPrefillKey(null);
     }
     onOpenChange(isOpen);
   };
@@ -163,16 +213,16 @@ export function TodayLogSetSheet({
       open={open}
       onOpenChange={handleOpenChange}
       title={item?.workouts.name ?? ""}
-      description="Log your sets and reps"
+      description={isEditing ? "Edit your logged sets" : "Log your sets and reps"}
       icon={<Dumbbell className="h-5 w-5 text-primary" />}
       footer={
         <Button
           className="w-full"
           size="lg"
           onClick={handleSubmit}
-          disabled={logMutation.isPending}
+          disabled={saveMutation.isPending}
         >
-          {logMutation.isPending ? (
+          {saveMutation.isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Saving...
@@ -180,7 +230,7 @@ export function TodayLogSetSheet({
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />
-              Save Sets
+              {isEditing ? "Update Sets" : "Save Sets"}
             </>
           )}
         </Button>

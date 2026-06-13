@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, X, Dumbbell, Loader2 } from "lucide-react";
+import { CheckCircle2, X, Dumbbell, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -97,15 +97,21 @@ export function TodayPlanItemCard({
         </div>
       </div>
 
-      {/* Action buttons */}
+      {/* Action buttons — completed items stay editable (no terminal "done" state) */}
       <div className="flex items-center gap-1 shrink-0">
-        {item.is_completed ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400">
-            <CheckCircle2 className="h-3 w-3" />
-            Done
-          </span>
-        ) : (
-          canLog && (
+        {canLog &&
+          (item.is_completed ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-green-600 hover:text-green-700 dark:text-green-400"
+              onClick={() => onLogSets(item)}
+              disabled={isPending}
+            >
+              <Pencil className="mr-1.5 h-3.5 w-3.5" />
+              Edit
+            </Button>
+          ) : (
             <Button
               size="sm"
               variant="outline"
@@ -115,8 +121,7 @@ export function TodayPlanItemCard({
               <Dumbbell className="mr-1.5 h-3.5 w-3.5" />
               Log Sets
             </Button>
-          )
-        )}
+          ))}
         {canRemove && (
           <Button
             variant="ghost"
