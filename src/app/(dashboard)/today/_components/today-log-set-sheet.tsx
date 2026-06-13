@@ -120,13 +120,15 @@ export function TodayLogSetSheet({
     },
   });
 
-  const addSet = () => setSets([...sets, sets[sets.length - 1] ?? emptySet()]);
+  const addSet = () => setSets((prev) => [...prev, emptySet()]);
 
   const removeSet = (index: number) =>
-    setSets(sets.filter((_, i) => i !== index));
+    setSets((prev) => prev.filter((_, i) => i !== index));
 
   const updateSet = (index: number, patch: Partial<SetEntry>) => {
-    setSets(sets.map((s, i) => (i === index ? { ...s, ...patch } : s)));
+    setSets((prev) =>
+      prev.map((s, i) => (i === index ? { ...s, ...patch } : s))
+    );
   };
 
   const handleSubmit = () => {
