@@ -11,6 +11,7 @@ import { SetInputRow } from "@/app/(dashboard)/workouts/_components/set-input-ro
 import { LastSessionRef } from "@/components/last-session-ref";
 import { PlateCalculator } from "@/components/plate-calculator";
 import { EquipmentNote } from "@/components/equipment-note";
+import { SchemeTag } from "@/components/scheme-tag";
 import { logWorkoutFromPlan } from "../actions";
 import { vibrate } from "@/lib/utils";
 import {
@@ -192,12 +193,17 @@ export function TodayLogSetSheet({
           enabled={open}
           onApply={(session) => setSets(session.sets.map(fromLoggedSet))}
         />
-        {logType === "weight_reps" && targets?.target_sets && (
+        {logType === "weight_reps" && targets?.target_sets ? (
           <p className="text-xs text-muted-foreground">
             Target: {targets.target_sets} sets
             {targets.target_reps ? ` × ${targets.target_reps} reps` : ""}
             {targets.target_weight_kg ? ` @ ${targets.target_weight_kg} kg` : ""}
           </p>
+        ) : (
+          <SchemeTag
+            sets={item?.workouts.default_sets}
+            reps={item?.workouts.default_reps}
+          />
         )}
         <div className="rounded-lg border bg-muted/30 p-3">
           <div className="mb-3 flex items-center justify-between px-1 text-xs font-medium text-muted-foreground">

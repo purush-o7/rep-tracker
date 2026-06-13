@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { MuscleTags } from "@/components/muscle-tags";
+import { SchemeTag } from "@/components/scheme-tag";
 import { removeFromPlan } from "../actions";
 import type { DailyPlanItemWithWorkout } from "@/lib/types";
 
@@ -87,7 +88,13 @@ export function TodayPlanItemCard({
         >
           {item.workouts.name}
         </Link>
-        <MuscleTags tags={item.workouts.workout_tags} max={3} className="mt-0.5" />
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <MuscleTags tags={item.workouts.workout_tags} max={3} />
+          <SchemeTag
+            sets={item.workouts.default_sets}
+            reps={item.workouts.default_reps}
+          />
+        </div>
       </div>
 
       {/* Action buttons */}

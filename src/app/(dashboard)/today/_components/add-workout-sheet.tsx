@@ -12,6 +12,7 @@ import { addRoutineToPlan, addWorkoutToPlan } from "../actions";
 import { createClient } from "@/lib/supabase/client";
 import { useDebounce } from "@/hooks/use-debounce";
 import { MuscleTags } from "@/components/muscle-tags";
+import { SchemeTag } from "@/components/scheme-tag";
 import type { Workout, WorkoutGroup } from "@/lib/types";
 
 interface AddWorkoutSheetProps {
@@ -37,7 +38,7 @@ export function AddWorkoutSheet({
     queryFn: async () => {
       let query = supabase
         .from("workouts")
-        .select("id, name, workout_tags(tags(name))")
+        .select("id, name, default_sets, default_reps, workout_tags(tags(name))")
         .order("name")
         .limit(20);
 
@@ -47,7 +48,10 @@ export function AddWorkoutSheet({
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as unknown as (Pick<Workout, "id" | "name"> & {
+      return data as unknown as (Pick<
+        Workout,
+        "id" | "name" | "default_sets" | "default_reps"
+      > & {
         workout_tags: { tags: { name: string } | null }[];
       })[];
     },
@@ -165,7 +169,13 @@ export function AddWorkoutSheet({
                   >
                     <div className="mr-2 min-w-0 flex-1">
                       <span className="block truncate text-sm">{workout.name}</span>
-                      <MuscleTags tags={workout.workout_tags} max={3} />
+                      <div className="flex flex-wrap items-center gap-x-2">
+                        <MuscleTags tags={workout.workout_tags} max={3} />
+                        <SchemeTag
+                          sets={workout.default_sets}
+                          reps={workout.default_reps}
+                        />
+                      </div>
                     </div>
                     <Button
                       size="sm"

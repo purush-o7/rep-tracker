@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SchemeTag } from "@/components/scheme-tag";
 import { WorkoutImageCarousel } from "./workout-image-carousel";
 import { WorkoutStatsPanel } from "./workout-stats-panel";
 import { LogWorkoutDialog } from "../../_components/log-workout-dialog";
@@ -79,15 +80,18 @@ export function WorkoutDetail({ workout, stats }: WorkoutDetailProps) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
           <h1 className="text-2xl font-bold sm:text-3xl">{workout.name}</h1>
-          {workout.workout_tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {workout.workout_tags.map((wt) => (
-                <Badge key={wt.tag_id} variant="secondary">
-                  {wt.tags.name}
-                </Badge>
-              ))}
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {workout.workout_tags.map((wt) => (
+              <Badge key={wt.tag_id} variant="secondary">
+                {wt.tags.name}
+              </Badge>
+            ))}
+            <SchemeTag
+              sets={workout.default_sets}
+              reps={workout.default_reps}
+              pill
+            />
+          </div>
         </div>
         <div className="flex shrink-0 gap-2">
           <Button

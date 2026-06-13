@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LogSetSheet } from "./log-set-sheet";
 import { MuscleTags } from "@/components/muscle-tags";
+import { SchemeTag } from "@/components/scheme-tag";
 import type { TaggedWorkout, WorkoutGroupItem } from "@/lib/types";
 
 interface RoutineWorkoutListProps {
@@ -54,10 +55,16 @@ export function RoutineWorkoutList({ items }: RoutineWorkoutListProps) {
                   <span className="block truncate font-medium">
                     {item.workouts.name}
                   </span>
-                  {targets && (
+                  {targets ? (
                     <span className="block text-xs text-muted-foreground">
                       {targets}
                     </span>
+                  ) : (
+                    <SchemeTag
+                      sets={item.workouts.default_sets}
+                      reps={item.workouts.default_reps}
+                      className="mt-0.5"
+                    />
                   )}
                   <MuscleTags
                     tags={item.workouts.workout_tags}

@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MuscleTags } from "@/components/muscle-tags";
+import { SchemeTag } from "@/components/scheme-tag";
 import { addWorkoutToPlan } from "@/app/(dashboard)/today/actions";
 import { formatDuration, formatDistance } from "@/lib/set-entry";
 import type { WorkoutWithTags } from "@/lib/types";
@@ -127,7 +128,10 @@ export function WorkoutCard({ workout, stats, onLog }: WorkoutCardProps) {
           </p>
         )}
 
-        <MuscleTags tags={workout.workout_tags} max={3} />
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <MuscleTags tags={workout.workout_tags} max={3} />
+          <SchemeTag sets={workout.default_sets} reps={workout.default_reps} />
+        </div>
 
         {/* Personal stats line */}
         <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">

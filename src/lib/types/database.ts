@@ -87,6 +87,8 @@ export type Database = {
           description: string | null;
           youtube_url: string | null;
           log_type: "weight_reps" | "duration" | "distance";
+          default_sets: number | null;
+          default_reps: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -96,6 +98,8 @@ export type Database = {
           description?: string | null;
           youtube_url?: string | null;
           log_type?: "weight_reps" | "duration" | "distance";
+          default_sets?: number | null;
+          default_reps?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -105,6 +109,8 @@ export type Database = {
           description?: string | null;
           youtube_url?: string | null;
           log_type?: "weight_reps" | "duration" | "distance";
+          default_sets?: number | null;
+          default_reps?: string | null;
           created_at?: string;
           updated_at?: string;
         };

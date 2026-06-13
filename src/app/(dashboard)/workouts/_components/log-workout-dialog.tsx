@@ -9,6 +9,7 @@ import { SetInputRow } from "./set-input-row";
 import { LastSessionRef } from "@/components/last-session-ref";
 import { PlateCalculator } from "@/components/plate-calculator";
 import { EquipmentNote } from "@/components/equipment-note";
+import { SchemeTag } from "@/components/scheme-tag";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -172,6 +173,9 @@ export function LogWorkoutDialog({
             </>
           )}
 
+          {workout && (
+            <SchemeTag sets={workout.default_sets} reps={workout.default_reps} />
+          )}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>Sets</Label>
