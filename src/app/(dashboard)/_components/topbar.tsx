@@ -27,6 +27,9 @@ export function Topbar() {
   )?.[1];
 
   const streak = profile?.current_streak ?? 0;
+  const displayName =
+    profile?.full_name ||
+    (profile?.handle ? `@${profile.handle}` : "");
 
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur-sm">
@@ -43,6 +46,11 @@ export function Topbar() {
         </div>
       )}
       <ThemeToggle />
+      {displayName && (
+        <span className="hidden max-w-[140px] truncate text-sm font-medium sm:inline">
+          {displayName}
+        </span>
+      )}
       <UserNav />
     </header>
   );

@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { WorkoutPicker } from "./workout-picker";
+import { RoutineWorkoutSearch } from "./routine-workout-search";
 import { createWorkoutGroup, updateWorkoutGroup } from "../actions";
 import type { TaggedWorkout, WorkoutGroupWithItems } from "@/lib/types";
 
@@ -80,10 +80,10 @@ export function RoutineForm({ workouts, editGroup }: RoutineFormProps) {
     });
   };
 
-  const toggleWorkout = (workoutId: string) => {
+  const addWorkout = (workoutId: string) => {
     setItems((prev) =>
       prev.some((i) => i.workout_id === workoutId)
-        ? prev.filter((i) => i.workout_id !== workoutId)
+        ? prev
         : [
             ...prev,
             {
@@ -138,11 +138,23 @@ export function RoutineForm({ workouts, editGroup }: RoutineFormProps) {
       ? await updateWorkoutGroup(editGroup.id, payload)
       : await createWorkoutGroup(payload);
 
-    if (result.error) {
+    if ("error" in result && result.error) {
       toast.error(result.error);
-    } else {
-      toast.success(isEditing ? "Routine updated!" : "Routine created!");
+      setLoading(false);
+      return;
+    }
+
+    if (isEditing) {
+      toast.success("Routine updated!");
       router.push("/routines");
+    } else {
+      // New routines start empty — send the user to the edit page to add exercises
+      const newId =
+        "data" in result && result.data
+          ? (result.data as { id: string }).id
+          : null;
+      toast.success("Routine created — now add your exercises");
+      router.push(newId ? `/routines/${newId}/edit` : "/routines");
     }
     setLoading(false);
   };
@@ -176,11 +188,13 @@ export function RoutineForm({ workouts, editGroup }: RoutineFormProps) {
         </CardContent>
       </Card>
 
+      {isEditing && (
       <Card>
         <CardHeader>
           <CardTitle>Workouts</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Optionally set targets per exercise — they prefill the log form.
+            Search to add exercises. Optionally set targets per exercise — they
+            prefill the log form.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -292,16 +306,17 @@ export function RoutineForm({ workouts, editGroup }: RoutineFormProps) {
           )}
           {items.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">
-              No workouts added yet. Use the picker below to add exercises.
+              No workouts added yet. Search below to add exercises.
             </p>
           )}
-          <WorkoutPicker
+          <RoutineWorkoutSearch
             workouts={workouts}
             selectedIds={selectedIds}
-            onSelect={toggleWorkout}
+            onAdd={addWorkout}
           />
         </CardContent>
       </Card>
+      )}
 
       <div className="flex gap-3">
         <Button
@@ -322,7 +337,7 @@ export function RoutineForm({ workouts, editGroup }: RoutineFormProps) {
             ? "Saving..."
             : isEditing
               ? "Update Routine"
-              : "Create Routine"}
+              : "Create & Add Exercises"}
         </Button>
       </div>
     </div>
