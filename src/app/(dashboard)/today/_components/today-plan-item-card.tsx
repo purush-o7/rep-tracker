@@ -154,15 +154,19 @@ export function TodayPlanItemCard({
         )}
       </div>
 
-      {/* Bottom-edge set representation, full width split into one segment per set */}
+      {/* Bottom-edge set representation: full width split into one segment per set,
+          alternating two theme colors. Full opacity once logged, faint as a preview. */}
       {segmentCount > 0 && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-1 gap-0.5 px-0.5">
           {Array.from({ length: segmentCount }).map((_, i) => (
             <div
               key={i}
-              className={`h-full flex-1 rounded-full ${
-                completed ? "bg-green-500" : "bg-primary/25"
-              }`}
+              className="h-full flex-1 rounded-full"
+              style={{
+                backgroundColor:
+                  i % 2 === 0 ? "var(--chart-1)" : "var(--chart-2)",
+                opacity: completed ? 1 : 0.3,
+              }}
             />
           ))}
         </div>
