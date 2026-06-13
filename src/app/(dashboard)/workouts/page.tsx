@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { WorkoutCatalog } from "./_components/workout-catalog";
 import type { WorkoutCardStats } from "./_components/workout-card";
+import type { WorkoutCreator } from "./_components/workout-catalog";
 import {
   parsePaginationParams,
   toRange,
@@ -105,6 +107,24 @@ export default async function WorkoutsPage({
     }
   }
 
+  // Creator names for user-added workouts (admin client — creators may be private)
+  const creatorIds = [
+    ...new Set(
+      workouts.map((w) => w.created_by).filter((id): id is string => !!id)
+    ),
+  ];
+  const creatorById: Record<string, WorkoutCreator> = {};
+  if (creatorIds.length > 0) {
+    const admin = createAdminClient();
+    const { data: creators } = await admin
+      .from("profiles")
+      .select("id, full_name, handle")
+      .in("id", creatorIds);
+    for (const c of creators ?? []) {
+      creatorById[c.id] = { full_name: c.full_name, handle: c.handle };
+    }
+  }
+
   const totalCount = workoutsRes.count ?? 0;
   const totalPages = getTotalPages(totalCount, pagination.pageSize);
   const currentPage = clampPage(pagination.page, totalPages);
@@ -117,6 +137,7 @@ export default async function WorkoutsPage({
         tags={tagsRes.data ?? []}
         partners={partners}
         statsByWorkout={statsByWorkout}
+        creatorById={creatorById}
         initialSearch={params.q ?? ""}
         currentPage={currentPage}
         pageSize={pagination.pageSize}

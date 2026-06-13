@@ -264,6 +264,54 @@ export async function saveWorkoutPref(workoutId: string, equipmentNote: string) 
   return { data: true };
 }
 
+export async function createUserWorkout(data: {
+  name: string;
+  description?: string;
+  youtube_url?: string;
+  tag_ids?: string[];
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  const name = data.name.trim();
+  if (name.length < 2) return { error: "Name must be at least 2 characters" };
+
+  const url = data.youtube_url?.trim();
+  if (url && !/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//.test(url)) {
+    return { error: "Video link must be a YouTube URL" };
+  }
+
+  const { data: workout, error } = await supabase
+    .from("workouts")
+    .insert({
+      name,
+      description: data.description?.trim() || null,
+      youtube_url: url || null,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") return { error: "A workout with that name may already exist" };
+    return { error: error.message };
+  }
+
+  if (data.tag_ids && data.tag_ids.length > 0) {
+    const { error: tagErr } = await supabase
+      .from("workout_tags")
+      .insert(data.tag_ids.map((tag_id) => ({ workout_id: workout.id, tag_id })));
+    if (tagErr) return { error: tagErr.message };
+  }
+
+  revalidatePath("/workouts");
+  return { data: workout };
+}
+
 export async function deleteLog(logId: string) {
   const supabase = await createClient();
   const {

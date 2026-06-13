@@ -34,6 +34,7 @@ export interface WorkoutCardStats {
 interface WorkoutCardProps {
   workout: WorkoutWithTags;
   stats?: WorkoutCardStats;
+  creator?: { full_name: string | null; handle: string | null };
   onLog: () => void;
 }
 
@@ -44,7 +45,12 @@ function getYoutubeThumbnail(url: string): string | null {
   return match ? `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg` : null;
 }
 
-export function WorkoutCard({ workout, stats, onLog }: WorkoutCardProps) {
+export function WorkoutCard({ workout, stats, creator, onLog }: WorkoutCardProps) {
+  const creatorLabel = creator
+    ? creator.handle
+      ? `@${creator.handle}`
+      : creator.full_name ?? "a member"
+    : null;
   const [isAdding, startAdding] = useTransition();
 
   const handleAddToToday = () => {
@@ -132,6 +138,13 @@ export function WorkoutCard({ workout, stats, onLog }: WorkoutCardProps) {
           <MuscleTags tags={workout.workout_tags} max={3} />
           <SchemeTag sets={workout.default_sets} reps={workout.default_reps} />
         </div>
+
+        {creatorLabel && (
+          <span className="text-[11px] text-muted-foreground">
+            Added by{" "}
+            <span className="font-medium text-foreground">{creatorLabel}</span>
+          </span>
+        )}
 
         {/* Personal stats line */}
         <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">

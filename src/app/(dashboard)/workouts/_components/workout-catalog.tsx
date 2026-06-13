@@ -5,14 +5,21 @@ import { Dumbbell } from "lucide-react";
 import { WorkoutCard, type WorkoutCardStats } from "./workout-card";
 import { WorkoutSearch } from "./workout-search";
 import { LogWorkoutDialog } from "./log-workout-dialog";
+import { AddCustomWorkoutDialog } from "./add-custom-workout-dialog";
 import { DataPagination } from "@/components/data-pagination";
 import type { Tag, Workout, WorkoutWithTags } from "@/lib/types";
+
+export interface WorkoutCreator {
+  full_name: string | null;
+  handle: string | null;
+}
 
 interface WorkoutCatalogProps {
   workouts: WorkoutWithTags[];
   tags: Tag[];
   partners?: { id: string; full_name: string | null }[];
   statsByWorkout?: Record<string, WorkoutCardStats>;
+  creatorById?: Record<string, WorkoutCreator>;
   initialSearch: string;
   currentPage: number;
   pageSize: number;
@@ -25,6 +32,7 @@ export function WorkoutCatalog({
   tags,
   partners,
   statsByWorkout,
+  creatorById,
   initialSearch,
   currentPage,
   pageSize,
@@ -44,12 +52,17 @@ export function WorkoutCatalog({
 
   return (
     <>
-      <WorkoutSearch
-        tags={tags}
-        selectedTag={selectedTag}
-        onTagChange={setSelectedTag}
-        initialSearch={initialSearch}
-      />
+      <div className="flex items-start gap-2">
+        <div className="flex-1">
+          <WorkoutSearch
+            tags={tags}
+            selectedTag={selectedTag}
+            onTagChange={setSelectedTag}
+            initialSearch={initialSearch}
+          />
+        </div>
+        <AddCustomWorkoutDialog tags={tags} />
+      </div>
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
           <Dumbbell className="mb-4 h-12 w-12" />
@@ -63,6 +76,11 @@ export function WorkoutCatalog({
               key={workout.id}
               workout={workout}
               stats={statsByWorkout?.[workout.id]}
+              creator={
+                workout.created_by
+                  ? creatorById?.[workout.created_by]
+                  : undefined
+              }
               onLog={() => setLogWorkout(workout)}
             />
           ))}
