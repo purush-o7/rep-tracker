@@ -9,13 +9,22 @@ import {
   Loader2,
   Trophy,
   ChevronRight,
+  Dumbbell,
+  Timer,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteLog } from "../../workouts/actions";
 import { fetchAllLogsForExport } from "../actions";
 import { LogFilters } from "./log-filters";
 import { LogDetailSheet } from "./log-detail-sheet";
-import { summarizeLog, logSetType } from "./log-helpers";
+import { summarizeLog, logSetType, logTags } from "./log-helpers";
+
+const TYPE_ICON = {
+  weight_reps: Dumbbell,
+  duration: Timer,
+  distance: MapPin,
+} as const;
 import { DataPagination } from "@/components/data-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -219,26 +228,56 @@ export function LogList({
               <CardContent className="divide-y p-0">
                 {group.logs.map((log) => {
                   const s = summarizeLog(log);
+                  const type = logSetType(log);
+                  const TypeIcon = TYPE_ICON[type];
+                  const tags = logTags(log).slice(0, 3);
                   return (
                     <div
                       key={log.id}
-                      className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/40"
+                      className={`flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/40 ${
+                        log.is_pr
+                          ? "border-l-2 border-amber-500 bg-amber-500/[0.06]"
+                          : ""
+                      }`}
                       onClick={() => setSelectedLog(log)}
                     >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                        <TypeIcon className="h-4 w-4" />
+                      </span>
                       <div className="min-w-0 flex-1">
                         <p className="flex items-center gap-1.5 truncate font-medium">
                           {log.workouts.name}
                           {log.is_pr && (
-                            <Trophy className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                            <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-500/15 px-1.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                              <Trophy className="h-2.5 w-2.5" />
+                              PR
+                            </span>
                           )}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {s.setCount} {s.setCount === 1 ? "set" : "sets"} ·{" "}
-                          {s.metric}
+                          <span className="font-medium text-foreground">
+                            {s.metric}
+                          </span>
+                          {type === "weight_reps" && s.est1RM > 0 && (
+                            <> · 1RM ~{s.est1RM}kg</>
+                          )}
                         </p>
+                        {tags.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {tags.map((t) => (
+                              <span
+                                key={t}
+                                className="rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-medium capitalize text-primary"
+                              >
+                                {t.replace(/_/g, " ")}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      {logSetType(log) === "weight_reps" && s.volume > 0 && (
-                        <span className="shrink-0 text-xs text-muted-foreground">
+                      {type === "weight_reps" && s.volume > 0 && (
+                        <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
                           {s.volume.toLocaleString()} kg
                         </span>
                       )}
