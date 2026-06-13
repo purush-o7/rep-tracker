@@ -1,12 +1,13 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
 import { CheckCircle2, X, Dumbbell, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { MuscleTags } from "@/components/muscle-tags";
 import { SchemeTag } from "@/components/scheme-tag";
+import { WorkoutQuickView } from "@/components/workout-quick-view";
 import { removeFromPlan } from "../actions";
 import type { DailyPlanItemWithWorkout } from "@/lib/types";
 
@@ -31,6 +32,7 @@ export function TodayPlanItemCard({
 }: TodayPlanItemCardProps) {
   const queryClient = useQueryClient();
   const planKey = ["today-plan", viewingUserId];
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
 
   const removeMutation = useMutation({
     mutationFn: (id: string) => removeFromPlan(id, forUserId),
@@ -82,14 +84,15 @@ export function TodayPlanItemCard({
         )}
       </div>
 
-      {/* Workout name */}
+      {/* Workout name — opens a quick preview */}
       <div className="min-w-0 flex-1">
-        <Link
-          href={`/workouts/${item.workout_id}`}
-          className="text-sm font-medium hover:underline truncate block"
+        <button
+          type="button"
+          onClick={() => setQuickViewOpen(true)}
+          className="block max-w-full truncate text-left text-sm font-medium hover:underline"
         >
           {item.workouts.name}
-        </Link>
+        </button>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <MuscleTags tags={item.workouts.workout_tags} max={3} />
           <SchemeTag
@@ -140,6 +143,12 @@ export function TodayPlanItemCard({
           </Button>
         )}
       </div>
+
+      <WorkoutQuickView
+        workout={item.workouts}
+        open={quickViewOpen}
+        onOpenChange={setQuickViewOpen}
+      />
     </div>
   );
 }
