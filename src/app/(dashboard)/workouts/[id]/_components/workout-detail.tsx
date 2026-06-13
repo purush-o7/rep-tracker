@@ -1,14 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft, Dumbbell, Play, Plus, Info } from "lucide-react";
+import {
+  ArrowLeft,
+  Dumbbell,
+  Play,
+  Plus,
+  Info,
+  CalendarPlus,
+  Loader2,
+} from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkoutImageCarousel } from "./workout-image-carousel";
 import { WorkoutStatsPanel } from "./workout-stats-panel";
 import { LogWorkoutDialog } from "../../_components/log-workout-dialog";
+import { addWorkoutToPlan } from "../../../today/actions";
 import type { WorkoutWithTags } from "@/lib/types";
 import type { WorkoutStats } from "./types";
 
@@ -36,10 +46,24 @@ interface WorkoutDetailProps {
 
 export function WorkoutDetail({ workout, stats }: WorkoutDetailProps) {
   const [logOpen, setLogOpen] = useState(false);
+  const [isAdding, startAdding] = useTransition();
   const embedUrl = workout.youtube_url
     ? getYouTubeEmbedUrl(workout.youtube_url)
     : null;
   const hasImages = (workout.workout_images ?? []).length > 0;
+
+  const handleAddToToday = () => {
+    startAdding(async () => {
+      const result = await addWorkoutToPlan(workout.id);
+      if (result.error) {
+        toast.error(result.error);
+      } else if (result.data) {
+        toast.success("Added to today's plan");
+      } else {
+        toast.info("Already in today's plan");
+      }
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -65,14 +89,25 @@ export function WorkoutDetail({ workout, stats }: WorkoutDetailProps) {
             </div>
           )}
         </div>
-        <Button
-          size="lg"
-          className="w-full shrink-0 sm:w-auto"
-          onClick={() => setLogOpen(true)}
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          Log This Workout
-        </Button>
+        <div className="flex shrink-0 gap-2">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={handleAddToToday}
+            disabled={isAdding}
+          >
+            {isAdding ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <CalendarPlus className="mr-1.5 h-4 w-4" />
+            )}
+            Add to Today
+          </Button>
+          <Button size="lg" onClick={() => setLogOpen(true)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Log This Workout
+          </Button>
+        </div>
       </div>
 
       {/* Two-column: media + how-to on the left, stats on the right (desktop) */}

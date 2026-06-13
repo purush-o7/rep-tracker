@@ -1,8 +1,10 @@
 "use client";
 
+import { useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Dumbbell, Youtube, Plus } from "lucide-react";
+import { Dumbbell, Youtube, Plus, CalendarPlus, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { addWorkoutToPlan } from "@/app/(dashboard)/today/actions";
 import type { WorkoutWithTags } from "@/lib/types";
 
 interface WorkoutCardProps {
@@ -27,6 +30,21 @@ function getYoutubeThumbnail(url: string): string | null {
 }
 
 export function WorkoutCard({ workout, onLog }: WorkoutCardProps) {
+  const [isAdding, startAdding] = useTransition();
+
+  const handleAddToToday = () => {
+    startAdding(async () => {
+      const result = await addWorkoutToPlan(workout.id);
+      if (result.error) {
+        toast.error(result.error);
+      } else if (result.data) {
+        toast.success(`${workout.name} added to today`);
+      } else {
+        toast.info(`${workout.name} is already in today's plan`);
+      }
+    });
+  };
+
   const youtubeThumbnail = workout.youtube_url
     ? getYoutubeThumbnail(workout.youtube_url)
     : null;
@@ -91,10 +109,24 @@ export function WorkoutCard({ workout, onLog }: WorkoutCardProps) {
           </div>
         )}
       </CardContent>
-      <CardFooter>
-        <Button className="w-full" onClick={onLog}>
+      <CardFooter className="gap-2">
+        <Button className="flex-1" onClick={onLog}>
           <Plus className="mr-1.5 h-4 w-4" />
           Log Workout
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleAddToToday}
+          disabled={isAdding}
+          aria-label="Add to today's plan"
+          title="Add to today's plan"
+        >
+          {isAdding ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <CalendarPlus className="h-4 w-4" />
+          )}
         </Button>
       </CardFooter>
     </Card>
