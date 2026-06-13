@@ -7,6 +7,7 @@ import {
 } from "@/lib/data/partners";
 import { LogList } from "./_components/log-list";
 import { LogsSummary, LogsSummarySkeleton } from "./_components/logs-summary";
+import { LogsHeatmap, LogsHeatmapSkeleton } from "./_components/logs-heatmap";
 import { PartnerSwitcher } from "../_components/partner-switcher";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ShieldAlert, Users } from "lucide-react";
@@ -142,6 +143,9 @@ export default async function MyLogsPage({
       )}
       <Suspense fallback={<LogsSummarySkeleton />}>
         <LogsSummary userId={viewingUserId} />
+      </Suspense>
+      <Suspense fallback={<LogsHeatmapSkeleton />}>
+        <LogsHeatmap userId={viewingUserId} activePartner={params.partner} />
       </Suspense>
       <LogList
         logs={(logs as unknown as Parameters<typeof LogList>[0]["logs"]) ?? []}
