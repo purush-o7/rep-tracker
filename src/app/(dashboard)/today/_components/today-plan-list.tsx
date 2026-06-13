@@ -66,7 +66,7 @@ export function TodayPlanList({
       const today = new Date().toISOString().split("T")[0];
       const { data, error } = await supabase
         .from("daily_plan_items")
-        .select("*, workouts(*, workout_tags(tags(*)))")
+        .select("*, workouts(*, workout_tags(tags(*))), workout_logs(workout_sets(count))")
         .eq("user_id", viewingUserId)
         .eq("plan_date", today)
         .order("sort_order");
@@ -151,6 +151,21 @@ export function TodayPlanList({
     item.source_group_id
       ? targetsByKey[`${item.source_group_id}:${item.workout_id}`] ?? null
       : null;
+
+  // Number of sets actually logged for a completed item (from the embedded count)
+  const setCountOf = (item: DailyPlanItemWithWorkout): number => {
+    const logs = (item as { workout_logs?: unknown }).workout_logs;
+    const log = Array.isArray(logs) ? logs[0] : logs;
+    const ws = (log as { workout_sets?: unknown } | null | undefined)
+      ?.workout_sets;
+    const first = Array.isArray(ws) ? ws[0] : ws;
+    const count = (first as { count?: number } | null | undefined)?.count;
+    return typeof count === "number" ? count : 0;
+  };
+
+  // How many sets were planned (routine target or the exercise's default)
+  const plannedSetsOf = (item: DailyPlanItemWithWorkout): number =>
+    getTargets(item)?.target_sets ?? item.workouts.default_sets ?? 0;
 
   const completedCount = items.filter((i) => i.is_completed).length;
   const totalCount = items.length;
@@ -307,6 +322,8 @@ export function TodayPlanList({
                       forUserId={addForUserId}
                       canLog={canLog}
                       canRemove={canAdd}
+                      setCount={setCountOf(item)}
+                      plannedSets={plannedSetsOf(item)}
                     />
                   </SortableItem>
                 </motion.div>

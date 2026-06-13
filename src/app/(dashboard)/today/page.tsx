@@ -73,7 +73,7 @@ export default async function TodayPage({
 
   const planPromise = supabase
     .from("daily_plan_items")
-    .select("*, workouts(*, workout_tags(tags(*)))")
+    .select("*, workouts(*, workout_tags(tags(*))), workout_logs(workout_sets(count))")
     .eq("user_id", viewingUserId)
     .eq("plan_date", today)
     .order("sort_order");

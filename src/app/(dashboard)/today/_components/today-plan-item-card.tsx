@@ -19,6 +19,10 @@ interface TodayPlanItemCardProps {
   forUserId?: string;
   canLog?: boolean;
   canRemove?: boolean;
+  /** Sets actually logged (completed items) */
+  setCount?: number;
+  /** Sets planned (routine target / exercise default) */
+  plannedSets?: number;
 }
 
 export function TodayPlanItemCard({
@@ -29,6 +33,8 @@ export function TodayPlanItemCard({
   forUserId,
   canLog = true,
   canRemove = true,
+  setCount = 0,
+  plannedSets = 0,
 }: TodayPlanItemCardProps) {
   const queryClient = useQueryClient();
   const planKey = ["today-plan", viewingUserId];
@@ -63,9 +69,13 @@ export function TodayPlanItemCard({
 
   const isPending = removeMutation.isPending;
 
+  // Bottom-edge set bar: solid green segments = sets logged; faint = sets planned
+  const completed = item.is_completed && setCount > 0;
+  const segmentCount = completed ? setCount : plannedSets;
+
   return (
     <div
-      className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
+      className={`relative overflow-hidden flex items-center gap-3 rounded-lg border p-3 transition-colors ${
         isPending
           ? "opacity-40 pointer-events-none"
           : item.is_completed
@@ -143,6 +153,20 @@ export function TodayPlanItemCard({
           </Button>
         )}
       </div>
+
+      {/* Bottom-edge set representation, full width split into one segment per set */}
+      {segmentCount > 0 && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-1 gap-0.5 px-0.5">
+          {Array.from({ length: segmentCount }).map((_, i) => (
+            <div
+              key={i}
+              className={`h-full flex-1 rounded-full ${
+                completed ? "bg-green-500" : "bg-primary/25"
+              }`}
+            />
+          ))}
+        </div>
+      )}
 
       <WorkoutQuickView
         workout={item.workouts}
