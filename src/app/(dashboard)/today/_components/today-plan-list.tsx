@@ -105,7 +105,7 @@ export function TodayPlanList({
   const applyScheduledMutation = useMutation({
     mutationFn: (groupId: string) => addRoutineToPlan(groupId),
     onSuccess: (result) => {
-      if (result.error) {
+      if ("error" in result) {
         toast.error(result.error);
       } else {
         toast.success("Routine added to today's plan!");
@@ -156,9 +156,11 @@ export function TodayPlanList({
   const totalCount = items.length;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
-  // In partner view, logging is only allowed when they granted edit permission
+  // In partner view, anything beyond viewing requires their edit permission
   const canLog = !isPartnerView || canEdit;
-  const canModifyPlan = !isPartnerView; // add / reorder / remove
+  const canAdd = !isPartnerView || canEdit; // add routines / workouts, remove items
+  const canReorder = !isPartnerView; // drag-reorder stays on your own plan
+  const addForUserId = isPartnerView ? viewingUserId : undefined;
 
   const handleLogSets = (item: DailyPlanItemWithWorkout) => {
     setSelectedItem(item);
@@ -166,7 +168,7 @@ export function TodayPlanList({
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    if (!canModifyPlan) return;
+    if (!canReorder) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
@@ -181,12 +183,29 @@ export function TodayPlanList({
   if (items.length === 0 && !isLoading) {
     if (isPartnerView) {
       return (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed p-12 text-center">
-          <Dumbbell className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            No workouts planned for today.
-          </p>
-        </div>
+        <>
+          <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed p-12 text-center">
+            <Dumbbell className="h-8 w-8 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              No workouts planned for today.
+            </p>
+            {canAdd && (
+              <Button onClick={() => setAddSheetOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Workout
+              </Button>
+            )}
+          </div>
+          {canAdd && (
+            <AddWorkoutSheet
+              open={addSheetOpen}
+              onOpenChange={setAddSheetOpen}
+              routines={routines}
+              viewingUserId={viewingUserId}
+              forUserId={addForUserId}
+            />
+          )}
+        </>
       );
     }
     return (
@@ -216,6 +235,8 @@ export function TodayPlanList({
           open={addSheetOpen}
           onOpenChange={setAddSheetOpen}
           routines={routines}
+          viewingUserId={viewingUserId}
+          forUserId={addForUserId}
         />
       </>
     );
@@ -264,7 +285,7 @@ export function TodayPlanList({
         <SortableContext
           items={items.map((i) => i.id)}
           strategy={verticalListSortingStrategy}
-          disabled={!canModifyPlan}
+          disabled={!canReorder}
         >
           <div className="space-y-2 mt-4">
             <AnimatePresence mode="popLayout" initial={false}>
@@ -277,14 +298,15 @@ export function TodayPlanList({
                   exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
                   transition={{ type: "spring", stiffness: 500, damping: 30, mass: 1 }}
                 >
-                  <SortableItem id={item.id} disabled={!canModifyPlan}>
+                  <SortableItem id={item.id} disabled={!canReorder}>
                     <TodayPlanItemCard
                       item={item}
                       index={index}
                       onLogSets={handleLogSets}
                       viewingUserId={viewingUserId}
+                      forUserId={addForUserId}
                       canLog={canLog}
-                      canRemove={canModifyPlan}
+                      canRemove={canAdd}
                     />
                   </SortableItem>
                 </motion.div>
@@ -299,8 +321,8 @@ export function TodayPlanList({
         </SortableContext>
       </DndContext>
 
-      {/* Add more button (own plan only) */}
-      {canModifyPlan && (
+      {/* Add more button */}
+      {canAdd && (
         <motion.div layout className="mt-4">
           <Button
             variant="outline"
@@ -314,11 +336,13 @@ export function TodayPlanList({
       )}
 
       {/* Sheets */}
-      {canModifyPlan && (
+      {canAdd && (
         <AddWorkoutSheet
           open={addSheetOpen}
           onOpenChange={setAddSheetOpen}
           routines={routines}
+          viewingUserId={viewingUserId}
+          forUserId={addForUserId}
         />
       )}
       <TodayLogSetSheet

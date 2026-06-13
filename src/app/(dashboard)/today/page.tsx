@@ -81,13 +81,12 @@ export default async function TodayPage({
   // Routines, schedule and targets only apply to your own plan
   const [planResult, routinesResult, scheduleResult] = await Promise.all([
     planPromise,
-    isPartnerView
-      ? Promise.resolve({ data: [] as never[] })
-      : supabase
-          .from("workout_groups")
-          .select("*, workout_group_items(count)")
-          .eq("user_id", user.id)
-          .order("name"),
+    // Always the current user's own routines — they can be added to a partner's plan too
+    supabase
+      .from("workout_groups")
+      .select("*, workout_group_items(count)")
+      .eq("user_id", user.id)
+      .order("name"),
     isPartnerView
       ? Promise.resolve({ data: null })
       : supabase

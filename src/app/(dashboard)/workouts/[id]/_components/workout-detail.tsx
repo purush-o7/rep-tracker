@@ -56,7 +56,7 @@ export function WorkoutDetail({ workout, stats }: WorkoutDetailProps) {
   const handleAddToToday = () => {
     startAdding(async () => {
       const result = await addWorkoutToPlan(workout.id);
-      if (result.error) {
+      if ("error" in result) {
         toast.error(result.error);
       } else if (result.data) {
         toast.success("Added to today's plan");

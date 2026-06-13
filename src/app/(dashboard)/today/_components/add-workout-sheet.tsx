@@ -19,18 +19,25 @@ interface AddWorkoutSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   routines: (WorkoutGroup & { workout_group_items: { count: number }[] })[];
-  // Workouts prop is now just for initial or fallback, we fetch via Query
+  /** Whose plan we're viewing — used for the cache key */
+  viewingUserId: string;
+  /** Set when adding to a partner's plan */
+  forUserId?: string;
 }
 
 export function AddWorkoutSheet({
   open,
   onOpenChange,
   routines,
+  viewingUserId,
+  forUserId,
 }: AddWorkoutSheetProps) {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
   const queryClient = useQueryClient();
   const supabase = createClient();
+  const planKey = ["today-plan", viewingUserId];
+  const target = forUserId ? "your partner's plan" : "today's plan";
 
   // Fetch workouts with TanStack Query
   const { data: workouts = [], isLoading: isSearching } = useQuery({
@@ -60,26 +67,26 @@ export function AddWorkoutSheet({
 
   // Mutation for adding a routine
   const routineMutation = useMutation({
-    mutationFn: (groupId: string) => addRoutineToPlan(groupId),
+    mutationFn: (groupId: string) => addRoutineToPlan(groupId, forUserId),
     onSuccess: (result) => {
-      if (result.error) {
+      if ("error" in result) {
         toast.error(result.error);
       } else {
-        toast.success("Routine added to today's plan");
-        queryClient.invalidateQueries({ queryKey: ["today-plan"] });
+        toast.success(`Routine added to ${target}`);
+        queryClient.invalidateQueries({ queryKey: planKey });
       }
     },
   });
 
   // Mutation for adding a single workout
   const workoutMutation = useMutation({
-    mutationFn: (workoutId: string) => addWorkoutToPlan(workoutId),
+    mutationFn: (workoutId: string) => addWorkoutToPlan(workoutId, forUserId),
     onSuccess: (result) => {
-      if (result.error) {
+      if ("error" in result) {
         toast.error(result.error);
       } else {
-        toast.success("Workout added to plan");
-        queryClient.invalidateQueries({ queryKey: ["today-plan"] });
+        toast.success(`Workout added to ${target}`);
+        queryClient.invalidateQueries({ queryKey: planKey });
       }
     },
   });

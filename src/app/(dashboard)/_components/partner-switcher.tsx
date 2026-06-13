@@ -1,7 +1,8 @@
 "use client";
 
+import { useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Users } from "lucide-react";
+import { Users, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -22,6 +23,7 @@ export function PartnerSwitcher({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
 
   if (partners.length === 0) return null;
 
@@ -33,15 +35,22 @@ export function PartnerSwitcher({
       params.set("partner", value);
     }
     const qs = params.toString();
-    router.push(`${pathname}${qs ? `?${qs}` : ""}`);
+    startTransition(() => {
+      router.push(`${pathname}${qs ? `?${qs}` : ""}`);
+    });
   };
 
   return (
     <div className="flex items-center gap-2">
-      <Users className="h-4 w-4 text-muted-foreground" />
+      {isPending ? (
+        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+      ) : (
+        <Users className="h-4 w-4 text-muted-foreground" />
+      )}
       <Select
         value={activePartnerId ?? "myself"}
         onValueChange={handleChange}
+        disabled={isPending}
       >
         <SelectTrigger className="w-[180px]">
           <SelectValue />

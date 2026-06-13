@@ -50,7 +50,7 @@ export function WorkoutCard({ workout, stats, onLog }: WorkoutCardProps) {
   const handleAddToToday = () => {
     startAdding(async () => {
       const result = await addWorkoutToPlan(workout.id);
-      if (result.error) toast.error(result.error);
+      if ("error" in result) toast.error(result.error);
       else if (result.data) toast.success(`${workout.name} added to today`);
       else toast.info(`${workout.name} is already in today's plan`);
     });

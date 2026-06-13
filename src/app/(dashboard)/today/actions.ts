@@ -1,11 +1,52 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { WorkoutSetInput } from "@/lib/validators/workout-log";
 import { checkAndFlagPr } from "@/lib/data/pr";
 
-export async function addWorkoutToPlan(workoutId: string) {
+/**
+ * Resolve who a plan write targets. For yourself, write through the normal
+ * RLS-bound client. For an accepted partner who allows editing, verify the
+ * relationship then write through the admin client (RLS on daily_plan_items
+ * only permits owners to insert/delete).
+ */
+async function resolvePlanTarget(
+  supabase: SupabaseClient,
+  userId: string,
+  forUserId: string | undefined
+): Promise<{ error: string } | { targetUserId: string; writer: SupabaseClient }> {
+  if (!forUserId || forUserId === userId) {
+    return { targetUserId: userId, writer: supabase };
+  }
+
+  const { data: partnership } = await supabase
+    .from("workout_partners")
+    .select("id")
+    .eq("status", "accepted")
+    .or(
+      `and(requester_id.eq.${userId},addressee_id.eq.${forUserId}),and(addressee_id.eq.${userId},requester_id.eq.${forUserId})`
+    )
+    .maybeSingle();
+
+  if (!partnership) return { error: "Not a valid partner" };
+
+  const { data: targetProfile } = await supabase
+    .from("profiles")
+    .select("partner_can_edit_logs")
+    .eq("id", forUserId)
+    .single();
+
+  if (!targetProfile?.partner_can_edit_logs) {
+    return { error: "This partner does not allow others to edit their plan" };
+  }
+
+  return { targetUserId: forUserId, writer: createAdminClient() };
+}
+
+export async function addWorkoutToPlan(workoutId: string, forUserId?: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -13,24 +54,28 @@ export async function addWorkoutToPlan(workoutId: string) {
 
   if (!user) return { error: "Not authenticated" };
 
+  const target = await resolvePlanTarget(supabase, user.id, forUserId);
+  if ("error" in target) return target;
+  const { targetUserId, writer } = target;
+
   const today = new Date().toISOString().split("T")[0];
 
   // Get next sort_order
-  const { data: existing } = await supabase
+  const { data: existing } = await writer
     .from("daily_plan_items")
     .select("sort_order")
-    .eq("user_id", user.id)
+    .eq("user_id", targetUserId)
     .eq("plan_date", today)
     .order("sort_order", { ascending: false })
     .limit(1);
 
   const nextOrder = existing && existing.length > 0 ? existing[0].sort_order + 1 : 0;
 
-  const { data: item, error } = await supabase
+  const { data: item, error } = await writer
     .from("daily_plan_items")
     .upsert(
       {
-        user_id: user.id,
+        user_id: targetUserId,
         workout_id: workoutId,
         plan_date: today,
         sort_order: nextOrder,
@@ -46,7 +91,7 @@ export async function addWorkoutToPlan(workoutId: string) {
   return { data: item };
 }
 
-export async function addRoutineToPlan(groupId: string) {
+export async function addRoutineToPlan(groupId: string, forUserId?: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -54,7 +99,11 @@ export async function addRoutineToPlan(groupId: string) {
 
   if (!user) return { error: "Not authenticated" };
 
-  // Fetch routine items
+  const target = await resolvePlanTarget(supabase, user.id, forUserId);
+  if ("error" in target) return target;
+  const { targetUserId, writer } = target;
+
+  // Fetch routine items (RLS only returns items for routines the user owns)
   const { data: groupItems, error: fetchError } = await supabase
     .from("workout_group_items")
     .select("workout_id, sort_order")
@@ -67,10 +116,10 @@ export async function addRoutineToPlan(groupId: string) {
   const today = new Date().toISOString().split("T")[0];
 
   // Get current max sort_order
-  const { data: existing } = await supabase
+  const { data: existing } = await writer
     .from("daily_plan_items")
     .select("sort_order")
-    .eq("user_id", user.id)
+    .eq("user_id", targetUserId)
     .eq("plan_date", today)
     .order("sort_order", { ascending: false })
     .limit(1);
@@ -78,14 +127,14 @@ export async function addRoutineToPlan(groupId: string) {
   const baseOrder = existing && existing.length > 0 ? existing[0].sort_order + 1 : 0;
 
   const itemsToInsert = groupItems.map((gi, i) => ({
-    user_id: user.id,
+    user_id: targetUserId,
     workout_id: gi.workout_id,
     plan_date: today,
     sort_order: baseOrder + i,
     source_group_id: groupId,
   }));
 
-  const { error } = await supabase
+  const { error } = await writer
     .from("daily_plan_items")
     .upsert(itemsToInsert, {
       onConflict: "user_id,workout_id,plan_date",
@@ -122,7 +171,7 @@ export async function reorderPlanItems(orderedIds: string[]) {
   return { data: true };
 }
 
-export async function removeFromPlan(planItemId: string) {
+export async function removeFromPlan(planItemId: string, forUserId?: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -130,11 +179,15 @@ export async function removeFromPlan(planItemId: string) {
 
   if (!user) return { error: "Not authenticated" };
 
-  const { error } = await supabase
+  const target = await resolvePlanTarget(supabase, user.id, forUserId);
+  if ("error" in target) return target;
+  const { targetUserId, writer } = target;
+
+  const { error } = await writer
     .from("daily_plan_items")
     .delete()
     .eq("id", planItemId)
-    .eq("user_id", user.id);
+    .eq("user_id", targetUserId);
 
   if (error) return { error: error.message };
 

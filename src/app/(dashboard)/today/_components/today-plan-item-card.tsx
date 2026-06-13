@@ -15,6 +15,7 @@ interface TodayPlanItemCardProps {
   index: number;
   onLogSets: (item: DailyPlanItemWithWorkout) => void;
   viewingUserId: string;
+  forUserId?: string;
   canLog?: boolean;
   canRemove?: boolean;
 }
@@ -24,6 +25,7 @@ export function TodayPlanItemCard({
   index,
   onLogSets,
   viewingUserId,
+  forUserId,
   canLog = true,
   canRemove = true,
 }: TodayPlanItemCardProps) {
@@ -31,7 +33,7 @@ export function TodayPlanItemCard({
   const planKey = ["today-plan", viewingUserId];
 
   const removeMutation = useMutation({
-    mutationFn: (id: string) => removeFromPlan(id),
+    mutationFn: (id: string) => removeFromPlan(id, forUserId),
     onMutate: async (deletedId) => {
       await queryClient.cancelQueries({ queryKey: planKey });
       const previousPlan =
