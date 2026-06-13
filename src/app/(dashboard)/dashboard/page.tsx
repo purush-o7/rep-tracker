@@ -8,6 +8,7 @@ import {
 import { DashboardStats } from "./_components/dashboard-stats";
 import { DashboardCharts } from "./_components/dashboard-charts";
 import { WeightGoalCard } from "./_components/weight-goal-card";
+import { WeeklyMuscleCoverage } from "./_components/weekly-muscle-coverage";
 import { PartnerSwitcher } from "../_components/partner-switcher";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ShieldAlert, Users } from "lucide-react";
@@ -33,6 +34,21 @@ function StatsCardsSkeleton() {
         </Card>
       ))}
     </div>
+  );
+}
+
+function CoverageSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <Skeleton className="h-5 w-56" />
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Skeleton className="h-2 w-full" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-12 w-full" />
+      </CardContent>
+    </Card>
   );
 }
 
@@ -145,6 +161,9 @@ export default async function DashboardPage({
       )}
       <Suspense fallback={<StatsCardsSkeleton />}>
         <DashboardStats userId={viewingUserId} />
+      </Suspense>
+      <Suspense fallback={<CoverageSkeleton />}>
+        <WeeklyMuscleCoverage userId={viewingUserId} />
       </Suspense>
       {viewingUserId === currentUserId && (
         <Suspense fallback={<WeightCardSkeleton />}>
