@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth";
 import { WorkoutDetail } from "./_components/workout-detail";
 import { WorkoutProgress } from "./_components/workout-progress";
 import type { ProgressionPoint, WorkoutStats } from "./_components/types";
@@ -41,9 +42,7 @@ export default async function WorkoutDetailPage({
 
   if (!workout) notFound();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser(supabase);
 
   let points: ProgressionPoint[] = [];
   let stats: WorkoutStats | null = null;

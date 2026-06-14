@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil, Sparkles, Globe } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth";
 import { Button } from "@/components/ui/button";
 import { RoutineWorkoutList } from "./_components/routine-workout-list";
 import { CopyRoutineButton } from "../_components/copy-routine-button";
@@ -18,9 +19,7 @@ export default async function GroupDetailPage({
 }) {
   const { groupId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser(supabase);
 
   const { data: group } = await supabase
     .from("workout_groups")

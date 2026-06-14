@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth";
 import { Button } from "@/components/ui/button";
 import { RoutineForm } from "../../_components/routine-form";
 
@@ -17,9 +18,7 @@ export default async function EditRoutinePage({
 }) {
   const { groupId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser(supabase);
 
   const [groupRes, workoutsRes, scheduleRes] = await Promise.all([
     supabase

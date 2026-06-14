@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth";
 import { redirect } from "next/navigation";
 import { ShieldAlert, Users } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -17,9 +18,7 @@ export default async function TodayPage({
 }) {
   const params = await searchParams;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser(supabase);
 
   if (!user) redirect("/login");
 

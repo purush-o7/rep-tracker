@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { WorkoutCatalog } from "./_components/workout-catalog";
 import type { WorkoutCardStats } from "./_components/workout-card";
@@ -26,9 +27,7 @@ export default async function WorkoutsPage({
 }) {
   const params = await searchParams;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser(supabase);
 
   const userId = user!.id;
   const pagination = parsePaginationParams(params);
