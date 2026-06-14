@@ -1,15 +1,37 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { RoutineList } from "./_components/routine-list";
 import {
-  DiscoverRoutines,
-  type PublicRoutine,
-} from "./_components/discover-routines";
+  RoutinesHub,
+  type OwnRoutine,
+  type DiscoverRoutine,
+} from "./_components/routines-hub";
 
 export const metadata: Metadata = {
   title: "My Routines - GymTracker",
 };
+
+type ItemRow = {
+  sort_order: number;
+  workouts: {
+    name: string;
+    workout_tags: { tags: { name: string } | null }[];
+  } | null;
+};
+
+function shapeExercises(items: ItemRow[] | null) {
+  return [...(items ?? [])]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((it) => ({
+      name: it.workouts?.name ?? "Unknown",
+      tags: (it.workouts?.workout_tags ?? [])
+        .map((t) => t.tags?.name)
+        .filter((n): n is string => !!n),
+    }));
+}
+
+const ITEM_SELECT =
+  "id, name, description, is_public, user_id, workout_group_items(sort_order, workouts(name, workout_tags(tags(name))))";
 
 export default async function RoutinesPage() {
   const supabase = await createClient();
@@ -19,31 +41,41 @@ export default async function RoutinesPage() {
 
   const userId = user!.id;
 
-  const [ownRes, publicRes] = await Promise.all([
+  const [ownRes, publicRes, scheduleRes] = await Promise.all([
     supabase
       .from("workout_groups")
-      .select("*, workout_group_items(*, workouts(*))")
+      .select(ITEM_SELECT)
       .eq("user_id", userId)
       .order("created_at", { ascending: false }),
-    // Public routines from others + system (user_id null); RLS allows reading public
+    supabase.from("workout_groups").select(ITEM_SELECT).eq("is_public", true),
     supabase
-      .from("workout_groups")
-      .select("id, name, description, user_id, workout_group_items(count)")
-      .eq("is_public", true)
-      .order("name"),
+      .from("weekly_schedule")
+      .select("group_id, day_of_week")
+      .eq("user_id", userId),
   ]);
 
-  const own = ownRes.data ?? [];
+  // group_id -> [day_of_week]
+  const daysByGroup: Record<string, number[]> = {};
+  for (const s of scheduleRes.data ?? []) {
+    (daysByGroup[s.group_id] ??= []).push(s.day_of_week);
+  }
+
+  const own: OwnRoutine[] = (ownRes.data ?? []).map((g) => ({
+    id: g.id,
+    name: g.name,
+    description: g.description,
+    isPublic: g.is_public,
+    exercises: shapeExercises(g.workout_group_items as unknown as ItemRow[]),
+    scheduledDays: daysByGroup[g.id] ?? [],
+  }));
+
   const publicGroups = (publicRes.data ?? []).filter(
     (g) => g.user_id !== userId
   );
 
-  // Resolve author handles for community (non-system) public routines
   const authorIds = [
     ...new Set(
-      publicGroups
-        .map((g) => g.user_id)
-        .filter((id): id is string => !!id)
+      publicGroups.map((g) => g.user_id).filter((id): id is string => !!id)
     ),
   ];
   const authorById: Record<string, string> = {};
@@ -58,22 +90,17 @@ export default async function RoutinesPage() {
     }
   }
 
-  const discover: PublicRoutine[] = publicGroups.map((g) => {
-    const countRel = g.workout_group_items as unknown as { count: number }[];
-    return {
+  const discover: DiscoverRoutine[] = publicGroups
+    .map((g) => ({
       id: g.id,
       name: g.name,
       description: g.description,
-      itemCount: countRel?.[0]?.count ?? 0,
       isSystem: g.user_id === null,
       authorLabel: g.user_id ? authorById[g.user_id] ?? "a member" : null,
-    };
-  });
+      exercises: shapeExercises(g.workout_group_items as unknown as ItemRow[]),
+    }))
+    // system programs first, then community
+    .sort((a, b) => Number(b.isSystem) - Number(a.isSystem) || a.name.localeCompare(b.name));
 
-  return (
-    <div className="space-y-8">
-      <RoutineList groups={own} />
-      <DiscoverRoutines routines={discover} />
-    </div>
-  );
+  return <RoutinesHub own={own} discover={discover} />;
 }
