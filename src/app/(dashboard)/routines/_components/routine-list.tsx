@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Pencil, Trash2, CalendarDays, Dumbbell } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  CalendarDays,
+  Dumbbell,
+  Globe,
+  Lock,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { deleteWorkoutGroup } from "../actions";
+import { deleteWorkoutGroup, setRoutineVisibility } from "../actions";
 import type { WorkoutGroupWithItems } from "@/lib/types";
 
 interface RoutineListProps {
@@ -21,6 +30,7 @@ interface RoutineListProps {
 
 export function RoutineList({ groups }: RoutineListProps) {
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [sharing, setSharing] = useState<string | null>(null);
 
   const handleDelete = async (groupId: string) => {
     setDeleting(groupId);
@@ -31,6 +41,14 @@ export function RoutineList({ groups }: RoutineListProps) {
       toast.success("Routine deleted");
     }
     setDeleting(null);
+  };
+
+  const handleShare = async (groupId: string, makePublic: boolean) => {
+    setSharing(groupId);
+    const result = await setRoutineVisibility(groupId, makePublic);
+    if (result.error) toast.error(result.error);
+    else toast.success(makePublic ? "Routine is now public" : "Routine is private");
+    setSharing(null);
   };
 
   return (
@@ -70,8 +88,14 @@ export function RoutineList({ groups }: RoutineListProps) {
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg truncate">
-                      {group.name}
+                    <CardTitle className="flex items-center gap-1.5 text-lg">
+                      <span className="truncate">{group.name}</span>
+                      {group.is_public && (
+                        <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                          <Globe className="h-2.5 w-2.5" />
+                          Public
+                        </span>
+                      )}
                     </CardTitle>
                     {group.description && (
                       <CardDescription className="line-clamp-2 mt-1">
@@ -80,6 +104,22 @@ export function RoutineList({ groups }: RoutineListProps) {
                     )}
                   </div>
                   <div className="flex gap-1 ml-2 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      title={group.is_public ? "Make private" : "Share publicly"}
+                      onClick={() => handleShare(group.id, !group.is_public)}
+                      disabled={sharing === group.id}
+                    >
+                      {sharing === group.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : group.is_public ? (
+                        <Globe className="h-4 w-4 text-primary" />
+                      ) : (
+                        <Lock className="h-4 w-4" />
+                      )}
+                    </Button>
                     <Button asChild variant="ghost" size="icon" className="h-8 w-8">
                       <Link href={`/routines/${group.id}/edit`}>
                         <Pencil className="h-4 w-4" />

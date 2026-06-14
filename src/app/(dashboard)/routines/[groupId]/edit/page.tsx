@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,9 @@ export default async function EditRoutinePage({
 }) {
   const { groupId } = await params;
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const [groupRes, workoutsRes, scheduleRes] = await Promise.all([
     supabase
@@ -29,6 +32,11 @@ export default async function EditRoutinePage({
   ]);
 
   if (!groupRes.data) notFound();
+
+  // Only the owner may edit — others get sent to the read-only detail view
+  if (!user || groupRes.data.user_id !== user.id) {
+    redirect(`/routines/${groupId}`);
+  }
 
   const scheduledDays = (scheduleRes.data ?? []).map((s) => s.day_of_week);
 

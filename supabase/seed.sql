@@ -536,3 +536,71 @@ FROM (VALUES ('Single-Arm Lat Pulldown', 'back'), ('Single-Arm Lat Pulldown', 'b
 JOIN public.workouts w ON lower(w.name) = lower(m.workout_name)
 JOIN public.tags t ON t.name = m.tag_name
 ON CONFLICT (workout_id, tag_id) DO NOTHING;
+
+-- 8. System routines — public 6-day split (from Manoj tracker-2). Idempotent.
+WITH g AS (
+  INSERT INTO public.workout_groups (user_id, name, description, is_public)
+  SELECT NULL, '6-Day Split · Day 1: Chest', 'Chest & triceps push day from the PulseIQ 6-day split.', true
+  WHERE NOT EXISTS (SELECT 1 FROM public.workout_groups WHERE name = '6-Day Split · Day 1: Chest' AND user_id IS NULL)
+  RETURNING id
+)
+INSERT INTO public.workout_group_items (group_id, workout_id, sort_order)
+SELECT g.id, w.id, v.ord
+FROM g
+CROSS JOIN (VALUES ('Barbell Bench Press',0),('Incline Barbell Bench Press',1),('Dumbbell Chest Fly',2),('Decline Barbell Bench Press',3),('Cable Crossover',4),('Tricep Pushdown',5),('Overhead Tricep Extension',6)) AS v(wname, ord)
+JOIN public.workouts w ON lower(w.name) = lower(v.wname);
+WITH g AS (
+  INSERT INTO public.workout_groups (user_id, name, description, is_public)
+  SELECT NULL, '6-Day Split · Day 2: Back', 'Back & biceps pull day from the PulseIQ 6-day split.', true
+  WHERE NOT EXISTS (SELECT 1 FROM public.workout_groups WHERE name = '6-Day Split · Day 2: Back' AND user_id IS NULL)
+  RETURNING id
+)
+INSERT INTO public.workout_group_items (group_id, workout_id, sort_order)
+SELECT g.id, w.id, v.ord
+FROM g
+CROSS JOIN (VALUES ('Lat Pulldown',0),('Seated Cable Row',1),('Single-Arm Lat Pulldown',2),('Face Pull',3),('Straight-arm Pulldown',4),('Barbell Curl',5),('Hyperextension (Back Extension)',6)) AS v(wname, ord)
+JOIN public.workouts w ON lower(w.name) = lower(v.wname);
+WITH g AS (
+  INSERT INTO public.workout_groups (user_id, name, description, is_public)
+  SELECT NULL, '6-Day Split · Day 3: Shoulders', 'Delts & traps day from the PulseIQ 6-day split.', true
+  WHERE NOT EXISTS (SELECT 1 FROM public.workout_groups WHERE name = '6-Day Split · Day 3: Shoulders' AND user_id IS NULL)
+  RETURNING id
+)
+INSERT INTO public.workout_group_items (group_id, workout_id, sort_order)
+SELECT g.id, w.id, v.ord
+FROM g
+CROSS JOIN (VALUES ('Overhead Barbell Press',0),('Lateral Raise',1),('Rear Delt Fly',2),('Front Raise',3),('Barbell Shrug',4),('Arnold Press',5)) AS v(wname, ord)
+JOIN public.workouts w ON lower(w.name) = lower(v.wname);
+WITH g AS (
+  INSERT INTO public.workout_groups (user_id, name, description, is_public)
+  SELECT NULL, '6-Day Split · Day 4: Legs', 'Quads, hamstrings, calves & core from the PulseIQ 6-day split.', true
+  WHERE NOT EXISTS (SELECT 1 FROM public.workout_groups WHERE name = '6-Day Split · Day 4: Legs' AND user_id IS NULL)
+  RETURNING id
+)
+INSERT INTO public.workout_group_items (group_id, workout_id, sort_order)
+SELECT g.id, w.id, v.ord
+FROM g
+CROSS JOIN (VALUES ('Leg Press',0),('Leg Extension',1),('Leg Curl',2),('Walking Lunge',3),('Romanian Deadlift',4),('Standing Calf Raise',5),('Plank',6)) AS v(wname, ord)
+JOIN public.workouts w ON lower(w.name) = lower(v.wname);
+WITH g AS (
+  INSERT INTO public.workout_groups (user_id, name, description, is_public)
+  SELECT NULL, '6-Day Split · Day 5: Arms', 'Biceps, triceps & forearms from the PulseIQ 6-day split.', true
+  WHERE NOT EXISTS (SELECT 1 FROM public.workout_groups WHERE name = '6-Day Split · Day 5: Arms' AND user_id IS NULL)
+  RETURNING id
+)
+INSERT INTO public.workout_group_items (group_id, workout_id, sort_order)
+SELECT g.id, w.id, v.ord
+FROM g
+CROSS JOIN (VALUES ('Barbell Curl',0),('Incline Dumbbell Curl',1),('Cable Curl',2),('Close-Grip Bench Press',3),('Overhead Tricep Extension',4),('Tricep Pushdown',5),('Wrist Curl',6)) AS v(wname, ord)
+JOIN public.workouts w ON lower(w.name) = lower(v.wname);
+WITH g AS (
+  INSERT INTO public.workout_groups (user_id, name, description, is_public)
+  SELECT NULL, '6-Day Split · Day 6: Core', 'Core & weak-point work from the PulseIQ 6-day split.', true
+  WHERE NOT EXISTS (SELECT 1 FROM public.workout_groups WHERE name = '6-Day Split · Day 6: Core' AND user_id IS NULL)
+  RETURNING id
+)
+INSERT INTO public.workout_group_items (group_id, workout_id, sort_order)
+SELECT g.id, w.id, v.ord
+FROM g
+CROSS JOIN (VALUES ('Hanging Leg Raise',0),('Cable Crunch',1),('Russian Twist',2),('Standing Calf Raise',3),('Face Pull',4),('Superman Hold',5),('Farmer''s Carry',6)) AS v(wname, ord)
+JOIN public.workouts w ON lower(w.name) = lower(v.wname);

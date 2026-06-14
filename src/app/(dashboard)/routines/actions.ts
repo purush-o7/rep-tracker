@@ -6,6 +6,92 @@ import type { CreateWorkoutGroupInput } from "@/lib/validators/workout-group";
 
 const MAX_ROUTINES = 10;
 
+/** Toggle whether one of your routines is shared publicly. */
+export async function setRoutineVisibility(groupId: string, isPublic: boolean) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("workout_groups")
+    .update({ is_public: isPublic, updated_at: new Date().toISOString() })
+    .eq("id", groupId)
+    .eq("user_id", user.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/routines");
+  revalidatePath(`/routines/${groupId}`);
+  return { data: true };
+}
+
+/** Copy any routine you can see (public/system/own) into your own routines. */
+export async function copyRoutine(groupId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  const { count } = await supabase
+    .from("workout_groups")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  if ((count ?? 0) >= MAX_ROUTINES) {
+    return { error: `You can keep up to ${MAX_ROUTINES} routines` };
+  }
+
+  // RLS lets us read it only if it's ours or public
+  const { data: source, error: srcError } = await supabase
+    .from("workout_groups")
+    .select(
+      "name, description, workout_group_items(workout_id, sort_order, target_sets, target_reps, target_weight_kg)"
+    )
+    .eq("id", groupId)
+    .single();
+
+  if (srcError || !source) return { error: "Routine not found" };
+
+  const { data: group, error: groupError } = await supabase
+    .from("workout_groups")
+    .insert({
+      user_id: user.id,
+      name: source.name.slice(0, 100),
+      description: source.description,
+      is_public: false,
+      source_group_id: groupId,
+    })
+    .select("id")
+    .single();
+
+  if (groupError) return { error: groupError.message };
+
+  const items = source.workout_group_items ?? [];
+  if (items.length > 0) {
+    const { error: itemsError } = await supabase
+      .from("workout_group_items")
+      .insert(
+        items.map((it) => ({
+          group_id: group.id,
+          workout_id: it.workout_id,
+          sort_order: it.sort_order,
+          target_sets: it.target_sets,
+          target_reps: it.target_reps,
+          target_weight_kg: it.target_weight_kg,
+        }))
+      );
+    if (itemsError) return { error: itemsError.message };
+  }
+
+  revalidatePath("/routines");
+  return { data: group };
+}
+
 export async function createWorkoutGroup(data: CreateWorkoutGroupInput) {
   const supabase = await createClient();
   const {

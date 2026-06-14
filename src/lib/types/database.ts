@@ -256,25 +256,31 @@ export type Database = {
       workout_groups: {
         Row: {
           id: string;
-          user_id: string;
+          user_id: string | null;
           name: string;
           description: string | null;
+          is_public: boolean;
+          source_group_id: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
-          user_id: string;
+          user_id?: string | null;
           name: string;
           description?: string | null;
+          is_public?: boolean;
+          source_group_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
-          user_id?: string;
+          user_id?: string | null;
           name?: string;
           description?: string | null;
+          is_public?: boolean;
+          source_group_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
