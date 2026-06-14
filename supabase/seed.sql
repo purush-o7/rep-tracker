@@ -540,7 +540,7 @@ ON CONFLICT (workout_id, tag_id) DO NOTHING;
 -- 8. System routines — public 6-day split (from Manoj tracker-2). Idempotent.
 WITH g AS (
   INSERT INTO public.workout_groups (user_id, name, description, is_public)
-  SELECT NULL, '6-Day Split · Day 1: Chest', 'Chest & triceps push day from the PulseIQ 6-day split.', true
+  SELECT NULL, '6-Day Split · Day 1: Chest', 'Chest & triceps push day from the 6-day split.', true
   WHERE NOT EXISTS (SELECT 1 FROM public.workout_groups WHERE name = '6-Day Split · Day 1: Chest' AND user_id IS NULL)
   RETURNING id
 )
@@ -551,7 +551,7 @@ CROSS JOIN (VALUES ('Barbell Bench Press',0),('Incline Barbell Bench Press',1),(
 JOIN public.workouts w ON lower(w.name) = lower(v.wname);
 WITH g AS (
   INSERT INTO public.workout_groups (user_id, name, description, is_public)
-  SELECT NULL, '6-Day Split · Day 2: Back', 'Back & biceps pull day from the PulseIQ 6-day split.', true
+  SELECT NULL, '6-Day Split · Day 2: Back', 'Back & biceps pull day from the 6-day split.', true
   WHERE NOT EXISTS (SELECT 1 FROM public.workout_groups WHERE name = '6-Day Split · Day 2: Back' AND user_id IS NULL)
   RETURNING id
 )
@@ -562,7 +562,7 @@ CROSS JOIN (VALUES ('Lat Pulldown',0),('Seated Cable Row',1),('Single-Arm Lat Pu
 JOIN public.workouts w ON lower(w.name) = lower(v.wname);
 WITH g AS (
   INSERT INTO public.workout_groups (user_id, name, description, is_public)
-  SELECT NULL, '6-Day Split · Day 3: Shoulders', 'Delts & traps day from the PulseIQ 6-day split.', true
+  SELECT NULL, '6-Day Split · Day 3: Shoulders', 'Delts & traps day from the 6-day split.', true
   WHERE NOT EXISTS (SELECT 1 FROM public.workout_groups WHERE name = '6-Day Split · Day 3: Shoulders' AND user_id IS NULL)
   RETURNING id
 )
@@ -573,7 +573,7 @@ CROSS JOIN (VALUES ('Overhead Barbell Press',0),('Lateral Raise',1),('Rear Delt 
 JOIN public.workouts w ON lower(w.name) = lower(v.wname);
 WITH g AS (
   INSERT INTO public.workout_groups (user_id, name, description, is_public)
-  SELECT NULL, '6-Day Split · Day 4: Legs', 'Quads, hamstrings, calves & core from the PulseIQ 6-day split.', true
+  SELECT NULL, '6-Day Split · Day 4: Legs', 'Quads, hamstrings, calves & core from the 6-day split.', true
   WHERE NOT EXISTS (SELECT 1 FROM public.workout_groups WHERE name = '6-Day Split · Day 4: Legs' AND user_id IS NULL)
   RETURNING id
 )
@@ -584,7 +584,7 @@ CROSS JOIN (VALUES ('Leg Press',0),('Leg Extension',1),('Leg Curl',2),('Walking 
 JOIN public.workouts w ON lower(w.name) = lower(v.wname);
 WITH g AS (
   INSERT INTO public.workout_groups (user_id, name, description, is_public)
-  SELECT NULL, '6-Day Split · Day 5: Arms', 'Biceps, triceps & forearms from the PulseIQ 6-day split.', true
+  SELECT NULL, '6-Day Split · Day 5: Arms', 'Biceps, triceps & forearms from the 6-day split.', true
   WHERE NOT EXISTS (SELECT 1 FROM public.workout_groups WHERE name = '6-Day Split · Day 5: Arms' AND user_id IS NULL)
   RETURNING id
 )
@@ -595,7 +595,7 @@ CROSS JOIN (VALUES ('Barbell Curl',0),('Incline Dumbbell Curl',1),('Cable Curl',
 JOIN public.workouts w ON lower(w.name) = lower(v.wname);
 WITH g AS (
   INSERT INTO public.workout_groups (user_id, name, description, is_public)
-  SELECT NULL, '6-Day Split · Day 6: Core', 'Core & weak-point work from the PulseIQ 6-day split.', true
+  SELECT NULL, '6-Day Split · Day 6: Core', 'Core & weak-point work from the 6-day split.', true
   WHERE NOT EXISTS (SELECT 1 FROM public.workout_groups WHERE name = '6-Day Split · Day 6: Core' AND user_id IS NULL)
   RETURNING id
 )
