@@ -1,13 +1,18 @@
 "use client";
 
 import { Activity, Calendar, Trophy, Weight } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 
 interface StatsCardsProps {
   weeklyWorkouts: number;
   monthlyWorkouts: number;
   longestStreak: number;
   totalVolume: number;
+}
+
+function compact(n: number) {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}t`;
+  return n.toLocaleString();
 }
 
 export function StatsCards({
@@ -17,57 +22,40 @@ export function StatsCards({
   totalVolume,
 }: StatsCardsProps) {
   const stats = [
-    {
-      title: "This Week",
-      value: weeklyWorkouts,
-      icon: Calendar,
-      suffix: "workouts",
-    },
-    {
-      title: "This Month",
-      value: monthlyWorkouts,
-      icon: Activity,
-      suffix: "workouts",
-    },
-    {
-      title: "Best Streak",
-      value: longestStreak,
-      icon: Trophy,
-      suffix: "days",
-    },
-    {
-      title: "Total Volume",
-      value: totalVolume,
-      icon: Weight,
-      suffix: "kg",
-    },
+    { title: "This week", value: String(weeklyWorkouts), suffix: "workouts", icon: Calendar, accent: "text-primary" },
+    { title: "This month", value: String(monthlyWorkouts), suffix: "workouts", icon: Activity, accent: "text-primary" },
+    { title: "Best streak", value: String(longestStreak), suffix: "days", icon: Trophy, accent: "text-amber-500" },
+    { title: "Total volume", value: compact(totalVolume), suffix: "kg", icon: Weight, accent: "text-primary" },
   ];
 
   return (
-    <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-      {stats.map((stat, index) => (
-        <Card
-          key={stat.title}
-          className="animate-in fade-in slide-in-from-bottom-4 fill-mode-both"
-          style={{ animationDuration: "500ms", animationDelay: `${index * 100}ms` }}
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-              <stat.icon className="h-4 w-4 text-primary" />
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {stats.map((stat, index) => {
+        const Icon = stat.icon;
+        return (
+          <Card
+            key={stat.title}
+            className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both p-3"
+            style={{ animationDuration: "400ms", animationDelay: `${index * 60}ms` }}
+          >
+            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
+              <Icon className={`h-3.5 w-3.5 ${stat.accent}`} />
+              <span className="truncate">{stat.title}</span>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div
-              className="text-2xl font-bold"
-              style={{ fontFamily: "var(--font-display), sans-serif" }}
-            >
-              {stat.value.toLocaleString()}
+            <div className="mt-1.5 flex items-baseline gap-1">
+              <span
+                className="text-2xl font-bold leading-none sm:text-3xl"
+                style={{ fontFamily: "var(--font-display), sans-serif" }}
+              >
+                {stat.value}
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                {stat.suffix}
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground">{stat.suffix}</p>
-          </CardContent>
-        </Card>
-      ))}
+          </Card>
+        );
+      })}
     </div>
   );
 }
