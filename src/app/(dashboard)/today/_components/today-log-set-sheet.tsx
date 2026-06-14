@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Dumbbell, Plus, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -179,9 +179,19 @@ export function TodayLogSetSheet({
     },
   });
 
-  // New set carries over the previous set's values (distinct copy)
-  const addSet = () =>
+  const setsRef = useRef<HTMLDivElement>(null);
+
+  // New set carries over the previous set's values (distinct copy), then
+  // scroll it into view so it isn't hidden behind the keyboard/footer.
+  const addSet = () => {
     setSets((prev) => [...prev, { ...(prev[prev.length - 1] ?? emptySet()) }]);
+    requestAnimationFrame(() =>
+      setsRef.current?.lastElementChild?.scrollIntoView({
+        block: "center",
+        behavior: "smooth",
+      })
+    );
+  };
 
   const removeSet = (index: number) =>
     setSets((prev) => prev.filter((_, i) => i !== index));
@@ -270,7 +280,7 @@ export function TodayLogSetSheet({
               />
             )}
           </div>
-          <div className="space-y-2">
+          <div ref={setsRef} className="space-y-2">
             {sets.map((set, i) => (
               <SetInputRow
                 key={i}

@@ -161,7 +161,7 @@ export function AddWorkoutSheet({
               <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
             )}
           </div>
-          <div className="max-h-[50vh] space-y-1 overflow-y-auto">
+          <div className="space-y-1">
             {workouts.length === 0 && !isSearching ? (
               <p className="py-4 text-center text-sm text-muted-foreground">
                 No workouts found

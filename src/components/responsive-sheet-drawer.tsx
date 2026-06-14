@@ -57,8 +57,8 @@ export function ResponsiveSheetDrawer({
 
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[85vh]">
+      <Drawer open={open} onOpenChange={onOpenChange} repositionInputs>
+        <DrawerContent className="max-h-[90dvh]">
           <DrawerHeader>
             <div className="flex items-center gap-3">
               {icon && (
