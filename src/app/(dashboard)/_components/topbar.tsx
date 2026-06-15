@@ -5,6 +5,7 @@ import { Flame } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { RestTimerButton } from "@/components/rest-timer/rest-timer-button";
 import { useUser } from "@/hooks/use-user";
 import { UserNav } from "./user-nav";
 
@@ -45,6 +46,7 @@ export function Topbar() {
           <span className="text-sm font-bold">{streak}</span>
         </div>
       )}
+      <RestTimerButton />
       <ThemeToggle />
       {displayName && (
         <span className="hidden max-w-[140px] truncate text-sm font-medium sm:inline">
