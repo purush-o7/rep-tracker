@@ -52,17 +52,13 @@ export function WorkoutCatalog({
 
   return (
     <>
-      <div className="flex items-start gap-2">
-        <div className="flex-1">
-          <WorkoutSearch
-            tags={tags}
-            selectedTag={selectedTag}
-            onTagChange={setSelectedTag}
-            initialSearch={initialSearch}
-          />
-        </div>
-        <AddCustomWorkoutDialog tags={tags} />
-      </div>
+      <WorkoutSearch
+        tags={tags}
+        selectedTag={selectedTag}
+        onTagChange={setSelectedTag}
+        initialSearch={initialSearch}
+        action={<AddCustomWorkoutDialog tags={tags} />}
+      />
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
           <Dumbbell className="mb-4 h-12 w-12" />

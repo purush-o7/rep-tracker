@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LogSetSheet } from "./log-set-sheet";
 import { MuscleTags } from "@/components/muscle-tags";
 import { SchemeTag } from "@/components/scheme-tag";
+import { WorkoutQuickView } from "@/components/workout-quick-view";
 import type { TaggedWorkout, WorkoutGroupItem } from "@/lib/types";
 
 interface RoutineWorkoutListProps {
@@ -27,6 +28,9 @@ export function RoutineWorkoutList({ items }: RoutineWorkoutListProps) {
   const [logItem, setLogItem] = useState<
     (WorkoutGroupItem & { workouts: TaggedWorkout }) | null
   >(null);
+  const [previewWorkout, setPreviewWorkout] = useState<TaggedWorkout | null>(
+    null
+  );
 
   if (items.length === 0) {
     return (
@@ -52,9 +56,13 @@ export function RoutineWorkoutList({ items }: RoutineWorkoutListProps) {
                 </span>
                 <Dumbbell className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
-                  <span className="block truncate font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewWorkout(item.workouts)}
+                    className="block max-w-full truncate text-left font-medium hover:underline"
+                  >
                     {item.workouts.name}
-                  </span>
+                  </button>
                   {targets ? (
                     <span className="block text-xs text-muted-foreground">
                       {targets}
@@ -87,6 +95,14 @@ export function RoutineWorkoutList({ items }: RoutineWorkoutListProps) {
         open={!!logItem}
         onOpenChange={(open) => {
           if (!open) setLogItem(null);
+        }}
+      />
+
+      <WorkoutQuickView
+        workout={previewWorkout}
+        open={!!previewWorkout}
+        onOpenChange={(open) => {
+          if (!open) setPreviewWorkout(null);
         }}
       />
     </>
