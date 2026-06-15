@@ -31,9 +31,21 @@ export default async function TodayPage({
 
   const isPartnerView = viewingUserId !== user.id;
 
+  const nowDate = new Date();
+  const todayLabel = `${nowDate.toLocaleDateString("en-US", {
+    weekday: "short",
+  })}, ${nowDate.getDate()} ${nowDate.toLocaleDateString("en-US", {
+    month: "short",
+  })}`;
+
   const header = (
     <div className="flex items-center justify-between gap-2">
-      <h1 className="text-2xl font-bold">Today</h1>
+      <div className="flex items-baseline gap-2">
+        <h1 className="text-2xl font-bold">Today</h1>
+        <span className="text-sm font-medium text-muted-foreground">
+          {todayLabel}
+        </span>
+      </div>
       {partners.length > 0 && (
         <PartnerSwitcher partners={partners} activePartnerId={params.partner} />
       )}

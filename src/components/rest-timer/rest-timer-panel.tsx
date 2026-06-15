@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Minus, Plus, Play, Square, RotateCcw, Timer } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,74 @@ function CountdownRing({
   );
 }
 
+function CustomDuration({ onStart }: { onStart: (seconds: number) => void }) {
+  const [minutes, setMinutes] = useState(1);
+  const [seconds, setSeconds] = useState(30);
+  const total = minutes * 60 + seconds;
+
+  const stepMin = (d: number) =>
+    setMinutes((m) => Math.min(59, Math.max(0, m + d)));
+  const stepSec = (d: number) =>
+    setSeconds((s) => {
+      const next = s + d;
+      if (next >= 60) return 0;
+      if (next < 0) return 45;
+      return next;
+    });
+
+  const field = (
+    value: number,
+    onDec: () => void,
+    onInc: () => void,
+    label: string
+  ) => (
+    <div className="flex flex-1 items-center overflow-hidden rounded-md border bg-background">
+      <button
+        type="button"
+        onClick={onDec}
+        className="flex h-10 w-8 shrink-0 items-center justify-center text-muted-foreground hover:bg-muted"
+        aria-label={`decrease ${label}`}
+      >
+        <Minus className="h-3.5 w-3.5" />
+      </button>
+      <span className="flex-1 text-center text-base font-semibold tabular-nums">
+        {value.toString().padStart(2, "0")}
+      </span>
+      <button
+        type="button"
+        onClick={onInc}
+        className="flex h-10 w-8 shrink-0 items-center justify-center text-muted-foreground hover:bg-muted"
+        aria-label={`increase ${label}`}
+      >
+        <Plus className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+
+  return (
+    <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+      <div className="flex items-center justify-between px-0.5">
+        <p className="text-xs font-medium text-muted-foreground">Custom</p>
+        <p className="text-[11px] text-muted-foreground">min : sec</p>
+      </div>
+      <div className="flex items-center gap-2">
+        {field(minutes, () => stepMin(-1), () => stepMin(1), "minutes")}
+        <span className="text-lg font-bold text-muted-foreground">:</span>
+        {field(seconds, () => stepSec(-15), () => stepSec(15), "seconds")}
+        <Button
+          size="icon"
+          className="h-10 w-12 shrink-0"
+          disabled={total <= 0}
+          onClick={() => onStart(total)}
+          aria-label="Start custom timer"
+        >
+          <Play className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function PanelBody() {
   const { status, remaining, duration, start, addSeconds, stop } =
     useRestTimer();
@@ -133,8 +202,9 @@ function PanelBody() {
           </Button>
         ))}
       </div>
+      <CustomDuration onStart={start} />
       <p className="text-center text-xs text-muted-foreground">
-        Tap a duration to start your rest timer
+        Tap a preset or set a custom rest time
       </p>
     </div>
   );
