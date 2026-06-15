@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { CheckCircle2, X, Dumbbell, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,7 +15,6 @@ import type { DailyPlanItemWithWorkout } from "@/lib/types";
 interface TodayPlanItemCardProps {
   item: DailyPlanItemWithWorkout;
   index: number;
-  onLogSets: (item: DailyPlanItemWithWorkout) => void;
   viewingUserId: string;
   forUserId?: string;
   canLog?: boolean;
@@ -28,7 +28,6 @@ interface TodayPlanItemCardProps {
 export function TodayPlanItemCard({
   item,
   index,
-  onLogSets,
   viewingUserId,
   forUserId,
   canLog = true,
@@ -117,24 +116,22 @@ export function TodayPlanItemCard({
         {canLog &&
           (item.is_completed ? (
             <Button
+              asChild
               size="sm"
               variant="ghost"
               className="text-green-600 hover:text-green-700 dark:text-green-400"
-              onClick={() => onLogSets(item)}
-              disabled={isPending}
             >
-              <Pencil className="mr-1.5 h-3.5 w-3.5" />
-              Edit
+              <Link href={`/today/log/${item.id}`}>
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                Edit
+              </Link>
             </Button>
           ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onLogSets(item)}
-              disabled={isPending}
-            >
-              <Dumbbell className="mr-1.5 h-3.5 w-3.5" />
-              Log Sets
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/today/log/${item.id}`}>
+                <Dumbbell className="mr-1.5 h-3.5 w-3.5" />
+                Log Sets
+              </Link>
             </Button>
           ))}
         {canRemove && (

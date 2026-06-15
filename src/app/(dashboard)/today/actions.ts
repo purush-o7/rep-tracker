@@ -195,6 +195,135 @@ export async function removeFromPlan(planItemId: string, forUserId?: string) {
   return { data: true };
 }
 
+/**
+ * Auto-save handler for the full-page log station. Idempotent: creates the
+ * workout log on first save (marking the plan item complete) and overwrites
+ * its sets on every subsequent save. Works for yourself or, with permission,
+ * a partner whose plan item this is.
+ */
+export async function saveSets(data: {
+  plan_item_id: string;
+  sets: WorkoutSetInput[];
+  notes?: string;
+  for_user_id?: string;
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  const targetUserId = data.for_user_id ?? user.id;
+
+  if (targetUserId !== user.id) {
+    const { data: partnership } = await supabase
+      .from("workout_partners")
+      .select("id")
+      .eq("status", "accepted")
+      .or(
+        `and(requester_id.eq.${user.id},addressee_id.eq.${targetUserId}),and(addressee_id.eq.${user.id},requester_id.eq.${targetUserId})`
+      )
+      .maybeSingle();
+
+    if (!partnership) return { error: "Not a valid partner" };
+
+    const { data: targetProfile } = await supabase
+      .from("profiles")
+      .select("partner_can_edit_logs")
+      .eq("id", targetUserId)
+      .single();
+
+    if (!targetProfile?.partner_can_edit_logs) {
+      return { error: "This partner does not allow others to log for them" };
+    }
+  }
+
+  const { data: planItem } = await supabase
+    .from("daily_plan_items")
+    .select("id, workout_id, workout_log_id")
+    .eq("id", data.plan_item_id)
+    .eq("user_id", targetUserId)
+    .maybeSingle();
+
+  if (!planItem) return { error: "Plan item not found" };
+
+  const setRows = (logId: string) =>
+    data.sets.map((set) => ({
+      log_id: logId,
+      set_number: set.set_number,
+      reps: set.reps ?? null,
+      weight_kg: set.weight_kg ?? 0,
+      duration_seconds: set.duration_seconds ?? null,
+      distance_m: set.distance_m ?? null,
+    }));
+
+  let logId = planItem.workout_log_id;
+
+  if (logId) {
+    // Update existing log: overwrite notes + sets
+    const { error: noteError } = await supabase
+      .from("workout_logs")
+      .update({ notes: data.notes || null })
+      .eq("id", logId);
+    if (noteError) return { error: noteError.message };
+
+    const { error: deleteError } = await supabase
+      .from("workout_sets")
+      .delete()
+      .eq("log_id", logId);
+    if (deleteError) return { error: deleteError.message };
+
+    if (data.sets.length > 0) {
+      const { error: setsError } = await supabase
+        .from("workout_sets")
+        .insert(setRows(logId));
+      if (setsError) return { error: setsError.message };
+    }
+  } else {
+    // First save: create the log + sets, mark plan item complete
+    const { data: log, error: logError } = await supabase
+      .from("workout_logs")
+      .insert({
+        user_id: targetUserId,
+        workout_id: planItem.workout_id,
+        notes: data.notes || null,
+        performed_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+    if (logError) return { error: logError.message };
+    logId = log.id;
+
+    if (data.sets.length > 0) {
+      const { error: setsError } = await supabase
+        .from("workout_sets")
+        .insert(setRows(logId));
+      if (setsError) return { error: setsError.message };
+    }
+
+    const { error: updateError } = await supabase
+      .from("daily_plan_items")
+      .update({ is_completed: true, workout_log_id: logId })
+      .eq("id", planItem.id);
+    if (updateError) return { error: updateError.message };
+  }
+
+  const pr = await checkAndFlagPr(
+    supabase,
+    targetUserId,
+    planItem.workout_id,
+    logId,
+    data.sets
+  );
+
+  revalidatePath("/today");
+  revalidatePath("/my-logs");
+  revalidatePath("/dashboard");
+  revalidatePath("/reports");
+  return { data: { log_id: logId }, pr };
+}
+
 export async function logWorkoutFromPlan(data: {
   plan_item_id: string;
   workout_id: string;

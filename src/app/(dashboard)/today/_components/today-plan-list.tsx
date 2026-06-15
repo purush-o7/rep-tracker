@@ -24,7 +24,6 @@ import { Progress } from "@/components/ui/progress";
 import { SortableItem } from "@/components/sortable-item";
 import { TodayPlanItemCard } from "./today-plan-item-card";
 import { AddWorkoutSheet } from "./add-workout-sheet";
-import { TodayLogSetSheet } from "./today-log-set-sheet";
 import { reorderPlanItems, addRoutineToPlan } from "../actions";
 import { createClient } from "@/lib/supabase/client";
 import type {
@@ -53,8 +52,6 @@ export function TodayPlanList({
   canEdit = true,
 }: TodayPlanListProps) {
   const [addSheetOpen, setAddSheetOpen] = useState(false);
-  const [logSheetOpen, setLogSheetOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<DailyPlanItemWithWorkout | null>(null);
   const queryClient = useQueryClient();
   const supabase = createClient();
 
@@ -176,11 +173,6 @@ export function TodayPlanList({
   const canAdd = !isPartnerView || canEdit; // add routines / workouts, remove items
   const canReorder = !isPartnerView; // drag-reorder stays on your own plan
   const addForUserId = isPartnerView ? viewingUserId : undefined;
-
-  const handleLogSets = (item: DailyPlanItemWithWorkout) => {
-    setSelectedItem(item);
-    setLogSheetOpen(true);
-  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (!canReorder) return;
@@ -317,7 +309,6 @@ export function TodayPlanList({
                     <TodayPlanItemCard
                       item={item}
                       index={index}
-                      onLogSets={handleLogSets}
                       viewingUserId={viewingUserId}
                       forUserId={addForUserId}
                       canLog={canLog}
@@ -362,14 +353,6 @@ export function TodayPlanList({
           forUserId={addForUserId}
         />
       )}
-      <TodayLogSetSheet
-        item={selectedItem}
-        targets={selectedItem ? getTargets(selectedItem) : null}
-        open={logSheetOpen}
-        onOpenChange={setLogSheetOpen}
-        viewingUserId={viewingUserId}
-        forUserId={isPartnerView ? viewingUserId : undefined}
-      />
     </>
   );
 }
