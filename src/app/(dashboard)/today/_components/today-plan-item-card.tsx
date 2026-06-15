@@ -21,8 +21,6 @@ interface TodayPlanItemCardProps {
   canRemove?: boolean;
   /** Sets actually logged (completed items) */
   setCount?: number;
-  /** Sets planned (routine target / exercise default) */
-  plannedSets?: number;
 }
 
 export function TodayPlanItemCard({
@@ -33,7 +31,6 @@ export function TodayPlanItemCard({
   canLog = true,
   canRemove = true,
   setCount = 0,
-  plannedSets = 0,
 }: TodayPlanItemCardProps) {
   const queryClient = useQueryClient();
   const planKey = ["today-plan", viewingUserId];
@@ -68,9 +65,9 @@ export function TodayPlanItemCard({
 
   const isPending = removeMutation.isPending;
 
-  // Bottom-edge set bar: solid green segments = sets logged; faint = sets planned
+  // Bottom-edge set bar: only shown once the workout is started (sets logged)
   const completed = item.is_completed && setCount > 0;
-  const segmentCount = completed ? setCount : plannedSets;
+  const segmentCount = completed ? setCount : 0;
 
   return (
     <div
@@ -151,8 +148,8 @@ export function TodayPlanItemCard({
         )}
       </div>
 
-      {/* Bottom-edge set representation: full width split into one segment per set,
-          alternating two theme colors. Full opacity once logged, faint as a preview. */}
+      {/* Bottom-edge set bar (only once started): full width split into one
+          segment per logged set, alternating two theme colors. */}
       {segmentCount > 0 && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-1 gap-0.5 px-0.5">
           {Array.from({ length: segmentCount }).map((_, i) => (
@@ -162,7 +159,6 @@ export function TodayPlanItemCard({
               style={{
                 backgroundColor:
                   i % 2 === 0 ? "var(--chart-1)" : "var(--chart-2)",
-                opacity: completed ? 1 : 0.3,
               }}
             />
           ))}

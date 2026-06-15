@@ -26,16 +26,11 @@ import { TodayPlanItemCard } from "./today-plan-item-card";
 import { AddWorkoutSheet } from "./add-workout-sheet";
 import { reorderPlanItems, addRoutineToPlan } from "../actions";
 import { createClient } from "@/lib/supabase/client";
-import type {
-  DailyPlanItemWithWorkout,
-  ExerciseTargets,
-  WorkoutGroup,
-} from "@/lib/types";
+import type { DailyPlanItemWithWorkout, WorkoutGroup } from "@/lib/types";
 
 interface TodayPlanListProps {
   initialPlanItems: DailyPlanItemWithWorkout[];
   routines: (WorkoutGroup & { workout_group_items: { count: number }[] })[];
-  targetsByKey?: Record<string, ExerciseTargets>;
   scheduledRoutine?: { id: string; name: string } | null;
   viewingUserId: string;
   isPartnerView?: boolean;
@@ -45,7 +40,6 @@ interface TodayPlanListProps {
 export function TodayPlanList({
   initialPlanItems,
   routines,
-  targetsByKey = {},
   scheduledRoutine = null,
   viewingUserId,
   isPartnerView = false,
@@ -144,11 +138,6 @@ export function TodayPlanList({
     </motion.div>
   );
 
-  const getTargets = (item: DailyPlanItemWithWorkout) =>
-    item.source_group_id
-      ? targetsByKey[`${item.source_group_id}:${item.workout_id}`] ?? null
-      : null;
-
   // Number of sets actually logged for a completed item (from the embedded count)
   const setCountOf = (item: DailyPlanItemWithWorkout): number => {
     const logs = (item as { workout_logs?: unknown }).workout_logs;
@@ -159,10 +148,6 @@ export function TodayPlanList({
     const count = (first as { count?: number } | null | undefined)?.count;
     return typeof count === "number" ? count : 0;
   };
-
-  // How many sets were planned (routine target or the exercise's default)
-  const plannedSetsOf = (item: DailyPlanItemWithWorkout): number =>
-    getTargets(item)?.target_sets ?? item.workouts.default_sets ?? 0;
 
   const completedCount = items.filter((i) => i.is_completed).length;
   const totalCount = items.length;
@@ -314,7 +299,6 @@ export function TodayPlanList({
                       canLog={canLog}
                       canRemove={canAdd}
                       setCount={setCountOf(item)}
-                      plannedSets={plannedSetsOf(item)}
                     />
                   </SortableItem>
                 </motion.div>

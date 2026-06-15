@@ -9,7 +9,6 @@ import {
   resolvePartnerView,
 } from "@/lib/data/partners";
 import { TodayPlanList } from "./_components/today-plan-list";
-import type { ExerciseTargets } from "@/lib/types";
 
 export default async function TodayPage({
   searchParams,
@@ -110,30 +109,6 @@ export default async function TodayPage({
 
   const planItems = planResult.data ?? [];
 
-  const targetsByKey: Record<string, ExerciseTargets> = {};
-  if (!isPartnerView) {
-    const sourceGroupIds = [
-      ...new Set(
-        planItems
-          .map((i) => i.source_group_id)
-          .filter((id): id is string => !!id)
-      ),
-    ];
-    if (sourceGroupIds.length > 0) {
-      const { data: groupItems } = await supabase
-        .from("workout_group_items")
-        .select("group_id, workout_id, target_sets, target_reps, target_weight_kg")
-        .in("group_id", sourceGroupIds);
-      for (const gi of groupItems ?? []) {
-        targetsByKey[`${gi.group_id}:${gi.workout_id}`] = {
-          target_sets: gi.target_sets,
-          target_reps: gi.target_reps,
-          target_weight_kg: gi.target_weight_kg,
-        };
-      }
-    }
-  }
-
   const scheduledGroup = scheduleResult.data?.workout_groups;
   const group = Array.isArray(scheduledGroup) ? scheduledGroup[0] : scheduledGroup;
   const scheduledRoutine = group ? { id: group.id, name: group.name } : null;
@@ -156,7 +131,6 @@ export default async function TodayPage({
         key={viewingUserId}
         initialPlanItems={planItems}
         routines={routinesResult.data ?? []}
-        targetsByKey={targetsByKey}
         scheduledRoutine={scheduledRoutine}
         viewingUserId={viewingUserId}
         isPartnerView={isPartnerView}
