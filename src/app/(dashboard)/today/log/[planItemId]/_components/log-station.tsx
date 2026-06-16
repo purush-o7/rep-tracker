@@ -62,10 +62,15 @@ export function LogStation({
   const partnerCount = people.filter((p) => !p.isSelf).length;
 
   return (
-    <div className="space-y-4 pb-8">
+    <div className="mx-auto max-w-2xl space-y-3 pb-8">
       {/* Header */}
-      <div className="flex items-start gap-3">
-        <Button asChild variant="ghost" size="icon" className="shrink-0">
+      <div className="flex items-start gap-2">
+        <Button
+          asChild
+          variant="ghost"
+          size="icon"
+          className="-ml-2 shrink-0"
+        >
           <Link href="/today">
             <ArrowLeft className="h-4 w-4" />
           </Link>
@@ -87,7 +92,7 @@ export function LogStation({
       {/* Description — detached from logging */}
       {workout.description && (
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <p className="text-sm leading-relaxed text-muted-foreground">
               {workout.description}
             </p>
@@ -238,7 +243,7 @@ function LogBlock({
 
   return (
     <Card className={person.isSelf ? "border-primary/30" : undefined}>
-      <CardContent className="space-y-3 p-4">
+      <CardContent className="space-y-3 p-3 sm:p-4">
         {/* Block header */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
